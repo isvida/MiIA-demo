@@ -1,0 +1,6 @@
+Incidencia 003
+Fecha: 2026-10-07
+Prioridad: baja
+Servicio: Proyector del aula 1.4
+Descripción: La imagen sale con un tinte verdoso. No impide dar clase; se ha comprobado que
+con otro cable HDMI mejora ligeramente.

@@ -1,0 +1,6 @@
+Incidencia 001
+Fecha: 2026-10-02
+Prioridad: media
+Servicio: Wi-Fi aula 3.2
+Descripción: Varios alumnos pierden la conexión a mitad de clase. Ocurre sobre todo a las 11:00,
+cuando hay más de 40 dispositivos conectados al mismo punto de acceso.

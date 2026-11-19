@@ -1,0 +1,28 @@
+# Configuración de LiteLLM — modo GPU: vLLM como backend principal y Ollama (CPU) como respaldo.
+# Úsala con:  LITELLM_CONFIG=./litellm/config.gpu.yaml docker compose --profile gpu up -d
+#
+# Demo de tolerancia a fallos: `docker compose stop vllm` y sigue respondiendo (más lento) desde Ollama.
+
+model_list:
+  - model_name: miia-demo               # lo que ven los clientes
+    litellm_params:
+      model: openai/Qwen/Qwen3-4B   # vLLM habla API OpenAI
+      api_base: http://vllm:8000/v1
+      api_key: sin-clave
+
+  - model_name: miia-respaldo           # backend alternativo (CPU)
+    litellm_params:
+      model: ollama_chat/qwen3.5:2b-q4_K_M
+      api_base: http://ollama:11434
+      num_ctx: 8192
+      think: false
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY
+  database_url: os.environ/DATABASE_URL
+
+litellm_settings:
+  drop_params: true
+  request_timeout: 600
+  num_retries: 1
+  fallbacks: [{"miia-demo": ["miia-respaldo"]}]

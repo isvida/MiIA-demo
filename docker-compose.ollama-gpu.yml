@@ -1,0 +1,11 @@
+# Activación opcional de GPU NVIDIA para Ollama.
+# Usar junto con docker-compose.yml; no es necesario el perfil gpu de vLLM.
+services:
+  ollama:
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]

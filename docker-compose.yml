@@ -1,0 +1,159 @@
+# MiIA-demo: miniatura de una infraestructura LLM on-premise.
+#
+#   usuario ──► Open WebUI ─┐
+#   scripts ────────────────┼──► LiteLLM (puerta única, claves, límites) ──► Ollama (CPU)  | vLLM (GPU)
+#   agente ──► servidor MCP ┘                 └─ Postgres (claves y consumo)
+#
+# Arranque rápido (sin GPU):   docker compose up -d
+# Con GPU NVIDIA (vLLM):       LITELLM_CONFIG=./litellm/config.gpu.yaml docker compose --profile gpu up -d
+
+name: miia-demo
+
+x-restart: &restart
+  restart: unless-stopped
+
+services:
+  # ── Motor de inferencia (CPU). Sirve el modelo y habla su propia API ─────────
+  ollama:
+    <<: *restart
+    image: ollama/ollama:latest
+    volumes:
+      - ollama:/root/.ollama
+    environment:
+      OLLAMA_KEEP_ALIVE: 30m        # mantiene el modelo cargado en memoria
+      OLLAMA_NUM_PARALLEL: "2"      # peticiones simultáneas por modelo
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # Descarga el modelo una vez y termina (~1,9 GB). Si cambias de modelo, cambia también litellm/config.yaml
+  ollama-init:
+    image: ollama/ollama:latest
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["ollama pull qwen3.5:2b-q4_K_M"]
+    restart: "no"
+
+  # ── Motor de inferencia (GPU, solo con --profile gpu) ───────────────────────
+  vllm:
+    profiles: ["gpu"]
+    <<: *restart
+    image: vllm/vllm-openai:latest
+    command:
+      - --model=Qwen/Qwen3-4B               # modelo distinto al de Ollama
+      - --max-model-len=8192
+      - --gpu-memory-utilization=0.85
+      - --enable-auto-tool-choice      # necesario para tool calling
+      - --tool-call-parser=hermes      # formato de herramientas de la familia Qwen
+    ipc: host
+    ports:
+      - "127.0.0.1:8000:8000"          # /metrics y /v1 para curiosear
+    volumes:
+      - hf-cache:/root/.cache/huggingface
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  # ── Base de datos de LiteLLM (claves virtuales, consumo) ────────────────────
+  db:
+    <<: *restart
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: litellm
+      POSTGRES_PASSWORD: litellm
+      POSTGRES_DB: litellm
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U litellm -d litellm"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # ── Pasarela LLM: un único endpoint compatible con OpenAI ───────────────────
+  litellm:
+    <<: *restart
+    image: ghcr.io/berriai/litellm:main-stable
+    command: ["--config", "/app/config.yaml", "--port", "4000"]
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-sk-demo-master}
+      DATABASE_URL: postgresql://litellm:litellm@db:5432/litellm
+      STORE_MODEL_IN_DB: "True"
+      UI_USERNAME: admin
+      UI_PASSWORD: ${LITELLM_UI_PASSWORD:-admin}
+    volumes:
+      - ${LITELLM_CONFIG:-./litellm/config.yaml}:/app/config.yaml:ro
+    ports:
+      - "127.0.0.1:4000:4000"          # API en /v1, panel en /ui
+
+  # ── Chat web ────────────────────────────────────────────────────────────────
+  open-webui:
+    <<: *restart
+    image: ghcr.io/open-webui/open-webui:main
+    depends_on:
+      - litellm
+    environment:
+      ENABLE_OLLAMA_API: "false"                         # solo habla con LiteLLM
+      OPENAI_API_BASE_URL: http://litellm:4000/v1
+      OPENAI_API_KEY: ${LITELLM_MASTER_KEY:-sk-demo-master}
+      WEBUI_AUTH: "false"                                # demo monousuario: sin registro
+      ENABLE_TITLE_GENERATION: "false"                   # no gastar tokens en títulos
+      ENABLE_TAGS_GENERATION: "false"
+    volumes:
+      - webui:/app/backend/data
+    ports:
+      - "127.0.0.1:3000:8080"
+
+  # ── Servidor MCP de ejemplo (herramientas que un agente puede descubrir) ────
+  mcp:
+    <<: *restart
+    build:
+      context: ./mcp
+      network: ${MIIA_BUILD_NETWORK:-default}
+    volumes:
+      - ./workspace:/workspace
+    ports:
+      - "127.0.0.1:8001:8000"          # MCP Inspector: http://localhost:8001/mcp
+
+  # ── Laboratorio: Python con las librerías ya instaladas ─────────────────────
+  #   docker compose run --rm lab python ejemplos/01_hola_api.py
+  lab:
+    profiles: ["lab"]
+    build:
+      context: ./lab
+      network: ${MIIA_BUILD_NETWORK:-default}
+    working_dir: /app
+    depends_on:
+      - litellm
+      - mcp
+    environment:
+      OPENAI_BASE_URL:
+      OPENAI_API_KEY:
+      MODEL:
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-sk-demo-master}
+      MCP_URL: http://mcp:8000/mcp
+      SANDBOX: /workspace
+    volumes:
+      - ./ejemplos:/app/ejemplos:ro
+      - ./workspace:/workspace
+    stdin_open: true
+    tty: true
+
+volumes:
+  ollama:
+  hf-cache:
+  pgdata:
+  webui:

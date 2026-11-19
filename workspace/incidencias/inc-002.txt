@@ -1,0 +1,6 @@
+Incidencia 002
+Fecha: 2026-10-05
+Prioridad: alta
+Servicio: Plataforma de prácticas
+Descripción: El servidor de prácticas deja de responder cuando se lanzan las entregas del grupo B.
+El proceso se queda sin memoria y hay que reiniciarlo a mano. Afecta a unos 60 alumnos.

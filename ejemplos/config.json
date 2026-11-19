@@ -1,0 +1,7 @@
+{
+  "base_url": "http://litellm:4000/v1",
+  "api_key": "${LITELLM_MASTER_KEY:-sk-demo-master}",
+  "model": "miia-demo",
+  "temperature": 0.0,
+  "no_think": true
+}

@@ -1,0 +1,19 @@
+# Configuración de LiteLLM — modo CPU (solo Ollama).
+# Todos los clientes ven un único modelo llamado "miia-demo"; qué hay detrás es cosa nuestra.
+
+model_list:
+  - model_name: miia-demo
+    litellm_params:
+      model: ollama_chat/qwen3.5:2b-q4_K_M   # "ollama_chat" usa el endpoint de chat
+      api_base: http://ollama:11434
+      num_ctx: 8192                     # ventana de contexto pedida a Ollama (cuesta memoria)
+      think: false
+
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY
+  database_url: os.environ/DATABASE_URL
+
+litellm_settings:
+  drop_params: true                     # ignora parámetros que el backend no soporta
+  request_timeout: 600                  # en CPU las respuestas largas tardan
