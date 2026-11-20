@@ -1,4 +1,4 @@
-"""03 · Tool calling a mano: el modelo NO ejecuta nada, solo pide que lo ejecutes tú.
+"""04 · Tool calling a mano: el modelo NO ejecuta nada, solo pide que lo ejecutes tú.
 
 Imprime los mensajes en bruto para ver el ciclo completo:
   usuario → modelo pide herramienta → tu código la ejecuta → modelo redacta la respuesta

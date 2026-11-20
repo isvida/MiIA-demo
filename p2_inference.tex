@@ -1,0 +1,505 @@
+%============================================================ BLOQUE 2 · Inferencia (20 min)
+\ugrsection{02}{Motores de inferencia}{Inicio: 0:10 · 20 min\\Cómo un servidor atiende a un modelo}
+
+\begin{frame}{Tokens, contexto y las dos fases}{Qué hace un servidor de modelos con cada petición}
+	\begin{columns}[T]
+		\begin{column}{0.5\textwidth}
+			\footnotesize
+			\begin{itemize}
+				\item \textbf{Token}: un trozo de palabra (en español, más tokens por palabra).
+				\item \textbf{Ventana de contexto}: el prompt y la respuesta deben caber en ella.
+				\item \textbf{Prefill}: todo el prompt se procesa en paralelo.
+				\item \textbf{Decode}: un token nuevo por paso.
+			\end{itemize}
+		\end{column}
+		\begin{column}{0.48\textwidth}
+			\centering
+			\adjustbox{max width=\linewidth}{%
+				\begin{tikzpicture}[every node/.append style={font=\footnotesize}]
+					\node[lab, anchor=south west] at (0,0.65) {prompt: $N$ tokens};
+					\node[bbx, minimum width=2.7cm, minimum height=1.0cm, anchor=west] (pf) at (0,0)
+					{\textbf{Prefill}\\ prompt en paralelo};
+					\node[lab, anchor=south west] at (2.85,0.65) {un token nuevo por paso};
+					\foreach \i in {1,...,5}
+					\node[rbx, minimum width=0.62cm, minimum height=1.0cm, anchor=west, inner sep=0pt]
+					at ({2.85+(\i-1)*0.68},0) {\scriptsize t\i};
+					\draw[bar] (0,-0.8) -- (2.7,-0.8) node[midway, below, lab] {hasta el primer token};
+					\draw[bar] (2.85,-0.8) -- (6.2,-0.8) node[midway, below, lab] {tokens/s};
+				\end{tikzpicture}}
+		\end{column}
+	\end{columns}
+	\demoline{01\_hola\_api.py}
+	\keymsg{Dos cifras importan al usuario: \textbf{tiempo al primer token} y \textbf{tokens por segundo}.}
+\end{frame}
+
+\begin{frame}{¿Qué limita cada fase?}{La diferencia está en cuánto cálculo hacemos por cada dato leído}
+	\begin{columns}[T]
+		\begin{column}{0.49\textwidth}
+			\centering
+			\textbf{\textcolor{nA}{Prefill: suele limitar el cálculo}}\\
+			{\scriptsize Especialmente en GPU con un prompt largo.}
+
+			\adjustbox{max width=\linewidth}{%
+				\begin{tikzpicture}[every node/.append style={font=\scriptsize}]
+					\node[bbx, minimum width=1.6cm, minimum height=0.65cm] (weights) at (0,1.3) {Pesos};
+					\node[bx, minimum width=2.2cm, minimum height=0.65cm] (prompt) at (3.4,1.3) {Muchos tokens};
+					\node[gbx, minimum width=3cm, minimum height=0.7cm] (compute) at (1.7,0) {CPU / GPU: cálculo paralelo};
+					\draw[ar] (weights.south) -- (compute.north west);
+					\draw[ar] (prompt.south) -- (compute.north east);
+				\end{tikzpicture}}\par
+			{\footnotesize Los mismos pesos se reutilizan para muchos tokens: muchas operaciones por dato leído.}
+		\end{column}
+		\begin{column}{0.49\textwidth}
+			\centering
+			\textbf{\textcolor{rojoUGR}{Decode: suele limitar la memoria}}\\
+			{\scriptsize Especialmente con pocas peticiones simultáneas.}
+
+			\adjustbox{max width=\linewidth}{%
+				\begin{tikzpicture}[every node/.append style={font=\scriptsize}]
+					\node[bbx, minimum width=2cm, minimum height=0.8cm] (memory) at (0,0.65) {RAM / VRAM\\ pesos y caché KV};
+					\node[rbx, minimum width=2cm, minimum height=0.8cm] (chip) at (3.4,0.65) {CPU / GPU\\ un token};
+					\draw[ar] (memory.east) -- (chip.west) node[midway, above, font=\scriptsize] {leer};
+					\draw[ar] (chip.south) -- ++(0,-0.65) -| (memory.south);
+					\node[anchor=south] at (1.7,-0.3) {repetir};
+				\end{tikzpicture}}\par
+			{\footnotesize Se suelen releer pesos y caché KV: importa el \textbf{ancho de banda}, no solo la capacidad.}
+		\end{column}
+	\end{columns}
+	\keymsg{El cuello de botella depende del hardware, el contexto y el batching.}
+\end{frame}
+
+\begin{frame}{Demo 01: ¿qué vamos a hacer?}{Comparar una respuesta completa con una respuesta en streaming}
+	\begin{columns}[T]
+		\begin{column}{0.31\textwidth}
+			\ugrcard[nA]{1}{Entrada}{Una pregunta al modelo: ¿qué es la caché KV?}
+		\end{column}
+		\begin{column}{0.31\textwidth}
+			\ugrcard[nB]{2}{Proceso}{Se hacen dos peticiones: una normal y otra que muestra la respuesta por fragmentos.}
+		\end{column}
+		\begin{column}{0.31\textwidth}
+			\ugrcard[nE]{3}{Resultado}{Veremos las respuestas, el tiempo hasta el primer fragmento y la velocidad aproximada.}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Demo 01: conectar y preparar la pregunta}{Primero configuramos el cliente y construimos los mensajes}
+	\begin{columns}[T]
+		\begin{column}{0.58\textwidth}
+			\begin{lstlisting}
+config = cargar_config()
+client = OpenAI(base_url=config.base_url,
+                api_key=config.api_key)
+MODEL = config.model
+NT = config.no_think_suffix
+for m in client.models.list().data:
+    print("  -", m.id)
+
+messages = [
+    {"role": "system",
+     "content": "Eres un asistente técnico. "
+                "Responde en español, breve."+NT},
+    {"role": "user",
+     "content": "Explica en dos frases qué es "
+                "la caché KV en un LLM."},
+]
+\end{lstlisting}
+		\end{column}
+		\begin{column}{0.4\textwidth}
+			\footnotesize
+			\begin{itemize}
+				\item \texttt{config.json} aporta URL, clave, modelo y temperatura.
+				\item La biblioteca \texttt{OpenAI} apunta a la pasarela local, no necesariamente a OpenAI.
+				\item \texttt{system} da instrucciones; \texttt{user} formula la pregunta.
+				\item \texttt{NT} añade \texttt{/no\_think} si está configurado.
+			\end{itemize}
+		\end{column}
+	\end{columns}
+	{\footnotesize Recorrido: \texttt{lab} $\rightarrow$ LiteLLM $\rightarrow$ Ollama $\rightarrow$ modelo.}
+\end{frame}
+
+\begin{frame}[fragile]{Demo 01: llamada normal}{La aplicación espera la respuesta completa}
+	\begin{columns}[T]
+		\begin{column}{0.58\textwidth}
+			\begin{lstlisting}
+t0 = time.perf_counter()
+r = client.chat.completions.create(
+    model=MODEL, messages=messages,
+    temperature=config.temperature)
+print(r.choices[0].message.content)
+print(f"[{time.perf_counter() - t0:.1f} s · "
+      f"tokens: {r.usage.prompt_tokens} entrada / "
+      f"{r.usage.completion_tokens} salida]")
+\end{lstlisting}
+		\end{column}
+		\begin{column}{0.4\textwidth}
+			\footnotesize
+			\begin{itemize}
+				\item \texttt{create} envía el modelo, los mensajes y la temperatura.
+				\item \texttt{r.choices[0]} contiene la primera respuesta completa.
+				\item \texttt{usage} informa de los tokens de entrada y salida.
+				\item El tiempo medido incluye toda la petición, no solo la generación.
+			\end{itemize}
+		\end{column}
+	\end{columns}
+	\keymsg{Sin \emph{streaming}, el texto se muestra cuando llega la respuesta completa.}
+\end{frame}
+
+\begin{frame}[fragile]{Demo 01: respuesta en streaming}{Fragmento del código: el texto aparece a medida que llega}
+	\begin{columns}[T]
+		\begin{column}{0.58\textwidth}
+			\begin{lstlisting}
+stream = client.chat.completions.create(
+    model=MODEL, messages=messages,
+    temperature=config.temperature,
+    stream=True,
+    stream_options={"include_usage": True},
+)
+for ev in stream:
+    if ev.usage:
+        usage = ev.usage
+    if ev.choices and ev.choices[0].delta.content:
+        if primero is None:
+            primero = time.perf_counter() - t0
+        chunks += 1
+        print(ev.choices[0].delta.content,
+              end="", flush=True)
+\end{lstlisting}
+		\end{column}
+		\begin{column}{0.4\textwidth}
+			\footnotesize
+			\begin{itemize}
+				\item \texttt{stream=True} recibe eventos; \texttt{delta.content} aporta texto nuevo.
+				\item \textbf{TTFT}: hasta el primer fragmento; incluye red y espera.
+				\item Velocidad aproximada: tokens de salida / tiempo tras el primer fragmento.
+				\item Sin \texttt{usage}, cuenta fragmentos, no tokens reales.
+			\end{itemize}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Demo 01: ejecutar e interpretar el resultado}{Desde la carpeta \texttt{miia-demo}, con los servicios y el modelo preparados}
+	\begin{lstlisting}[language={}]
+docker compose run --rm lab python ejemplos/01_hola_api.py
+\end{lstlisting}
+	\begin{columns}[T]
+		\begin{column}{0.57\textwidth}
+			{\scriptsize\textbf{Salida real de una ejecución local} (texto recortado):}
+			\begin{lstlisting}[language={}]
+Modelos disponibles en la pasarela:
+  - miia-demo
+-- Llamada normal --
+La caché KV almacena los valores de las palabras ...
+[5.8 s · tokens: 51 entrada / 60 salida]
+-- Streaming --
+La caché KV almacena los valores de las palabras ...
+TTFT: 0.12 s
+Generación: 17.6 tokens/s
+\end{lstlisting}
+		\end{column}
+		\begin{column}{0.4\textwidth}
+			\footnotesize
+			\begin{itemize}
+				\item Son \textbf{dos peticiones}: normal y streaming.
+				\item Respuestas y tiempos varían; la primera carga puede tardar más.
+				\item La respuesta mostrada es imprecisa: la caché KV guarda claves y valores de atención, no palabras.
+			\end{itemize}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{La memoria es el verdadero límite}{Solo los pesos del modelo, sin contar caché KV ni sobrecarga}
+	\vspace{0.3cm}
+	\begin{columns}[T]
+		\begin{column}{0.3\textwidth}
+			\bigstat{14}{GB para un modelo de 7B parámetros en 16 bits (FP16).}
+		\end{column}
+		\begin{column}{0.3\textwidth}
+			\bigstat[ugrInk]{$\approx$4}{GB para el mismo modelo, cuantizado a 4 bits.}
+		\end{column}
+		\begin{column}{0.3\textwidth}
+			\bigstat[nA]{140}{GB para uno de 70B en 16 bits: una GPU de 80 GB se queda corta.}
+		\end{column}
+	\end{columns}
+	\keymsg{VRAM $\approx$ pesos + \textbf{caché KV} + sobrecarga. Antes de preguntar cuál es el mejor modelo, pregunta cuál cabe y para cuántos usuarios.}
+\end{frame}
+
+\begin{frame}{Calcular la memoria de los pesos}{Una estimación antes de elegir la GPU}
+	\themeblock{rojoUGR}{Fórmula}{%
+		\centering
+		$\text{Memoria de los pesos (bytes)} \approx
+		\text{parámetros} \times \dfrac{\text{bits por parámetro}}{8}$}
+	\vspace{2pt}
+	\footnotesize
+	\textbf{Ejemplo: modelo de 7B} = 7.000 millones de parámetros; 1 byte = 8 bits.
+	\begin{itemize}
+		\setlength{\itemsep}{0pt}
+		\item \textbf{FP16}: $7.000$ millones $\times$ $(16 / 8)$ bytes
+		      $=$ \textbf{14.000 millones de bytes = 14 GB}.
+		\item \textbf{4 bits}: $7.000$ millones $\times$ $(4 / 8)$ bytes
+		      $=$ \textbf{3.500 millones de bytes = 3,5 GB}.
+	\end{itemize}
+	1 GB = 1.000 millones de bytes. Los metadatos de cuantización pueden aumentar el tamaño.
+	\keymsg{Son solo los pesos: para ejecutar el modelo hay que reservar también memoria para la caché KV y otras sobrecargas.}
+\end{frame}
+
+\begin{frame}{Tres ideas para ahorrar memoria}{La caché KV crece con el contexto \emph{y} con las peticiones simultáneas}
+	\begin{columns}[T]
+		\begin{column}{0.31\textwidth}
+			\ugrcard{1}{Cuantización}{De 2 a 4$\times$ menos memoria, con poca pérdida.}
+		\end{column}
+		\begin{column}{0.31\textwidth}
+			\ugrcard{2}{16 GB bastan}{7--8B en 8 bits caben en 16 GB.}
+		\end{column}
+		\begin{column}{0.31\textwidth}
+			\ugrcard[ugrInk]{3}{Mixture-of-experts}{Depende de los parámetros totales/activos.}
+		\end{column}
+	\end{columns}
+	\keymsg{El contexto largo y la concurrencia se pagan en memoria: dimensiona para los dos.}
+\end{frame}
+
+\begin{frame}{Por qué una GPU atiende a muchos usuarios}{Batching continuo y gestión de la caché KV}
+	\begin{columns}[T]
+		\begin{column}{0.58\textwidth}
+			\centering
+			\adjustbox{max width=\linewidth}{%
+				\begin{tikzpicture}[x=0.55cm, y=1.35cm]
+					\node[lab, anchor=south west] at (0,1.62) {Batching estático};
+					\foreach \y/\l in {0/6,0.4/3,0.8/5,1.2/2}{
+							\fill[nA!35] (0,\y) rectangle (\l,\y+0.3);
+							\fill[ugrLine] (\l,\y) rectangle (6,\y+0.3);
+						}
+					\begin{scope}[xshift=8.5cm]
+						\node[lab, anchor=south west] at (0,1.62) {Batching continuo};
+						\fill[nA!35] (0,0) rectangle (6,0.3);
+						\fill[nA!35] (0,0.4) rectangle (3,0.7);   \fill[rojoUGR!35] (3,0.4) rectangle (6,0.7);
+						\fill[nA!35] (0,0.8) rectangle (5,1.1);   \fill[rojoUGR!35] (5,0.8) rectangle (6,1.1);
+						\fill[nA!35] (0,1.2) rectangle (2,1.5);   \fill[rojoUGR!35] (2,1.2) rectangle (6,1.5);
+					\end{scope}
+					\draw[ar] (0,-0.12) -- (6.3,-0.12) node[right, lab] {tiempo};
+					\draw[ar] (8.5,-0.12) -- (14.8,-0.12) node[right, lab] {tiempo};
+					\fill[nA!35] (0,-0.55) rectangle (0.6,-0.35); \node[lab, anchor=west] at (0.8,-0.45) {en ejecución};
+					\fill[rojoUGR!35] (5.0,-0.55) rectangle (5.6,-0.35); \node[lab, anchor=west] at (5.8,-0.45) {petición nueva};
+					\fill[ugrLine] (11.0,-0.55) rectangle (11.6,-0.35); \node[lab, anchor=west] at (11.8,-0.45) {GPU ociosa};
+				\end{tikzpicture}}
+		\end{column}
+		\begin{column}{0.4\textwidth}
+			\footnotesize
+			\begin{itemize}
+				\item \textbf{Batching continuo}: incorpora y retira peticiones en cada paso.
+				\item \textbf{PagedAttention}: organiza la caché KV en bloques fijos.
+				\item \textbf{RadixAttention}: reutiliza prefijos comunes mediante un árbol.
+			\end{itemize}
+		\end{column}
+	\end{columns}
+	\demoline{02\_concurrencia.py}
+	\keymsg{Servir es un problema de planificación: mantener la GPU ocupada con muchas peticiones a la vez.}
+\end{frame}
+
+\begin{frame}{Demo 02: ¿qué vamos a hacer?}{Observar qué pasa cuando llegan varias preguntas a la vez}
+	\begin{columns}[T]
+		\begin{column}{0.31\textwidth}
+			\ugrcard[nA]{1}{Entrada}{Varias preguntas independientes sobre Granada: ocho por defecto.}
+		\end{column}
+		\begin{column}{0.31\textwidth}
+			\ugrcard[nB]{2}{Proceso}{El cliente inicia todas las peticiones sin esperar a que termine la anterior.}
+		\end{column}
+		\begin{column}{0.31\textwidth}
+			\ugrcard[nE]{3}{Resultado}{Veremos cuándo termina cada una y los tokens por segundo agregados.}
+		\end{column}
+	\end{columns}
+	{\footnotesize El servidor puede procesar las peticiones por turnos.}
+\end{frame}
+
+\begin{frame}[fragile]{Demo 02: lanzar varias peticiones}{El cliente inicia todas las tareas sin esperar a que termine la anterior}
+	\begin{columns}[T]
+		\begin{column}{0.55\textwidth}
+			\begin{lstlisting}
+N = int(sys.argv[1]) if len(sys.argv) > 1 else 8
+client = AsyncOpenAI(base_url=config.base_url,
+                     api_key=config.api_key)
+
+async def main():
+    t0 = time.perf_counter()
+    tokens = await asyncio.gather(
+        *(una(i, t0) for i in range(1, N + 1)))
+    total = time.perf_counter() - t0
+    # El script imprime sum(tokens) / total.
+
+asyncio.run(main())
+\end{lstlisting}
+		\end{column}
+		\begin{column}{0.43\textwidth}
+			\centering
+			\adjustbox{max width=\linewidth}{%
+				\begin{tikzpicture}[every node/.append style={font=\scriptsize}]
+					\node[bbx, minimum width=1.5cm] (client) at (0,0) {Cliente\\$N$ tareas};
+					\node[bx, minimum width=1.6cm] (gateway) at (2.5,0) {LiteLLM};
+					\node[rbx, minimum width=1.8cm] (engine) at (5.1,0) {Ollama\\hasta 2 en paralelo};
+					\draw[ar] (client) -- (gateway);
+					\draw[ar] (gateway) -- (engine);
+				\end{tikzpicture}}\par
+			\footnotesize
+			\begin{itemize}
+				\item \texttt{N} es 8 por defecto o el número indicado.
+				\item \texttt{gather} espera a que terminen todas las tareas.
+				\item En el perfil CPU por defecto, otras peticiones pueden esperar turno.
+			\end{itemize}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Demo 02: qué hace cada petición}{Todas comparten el mismo instante inicial \texttt{t0}}
+	\begin{columns}[T]
+		\begin{column}{0.58\textwidth}
+			\begin{lstlisting}
+async def una(i: int, t0: float):
+    r = await client.chat.completions.create(
+        model=MODEL, temperature=config.temperature,
+        max_tokens=120,
+        messages=[{
+            "role": "user",
+            "content": (f"Dame un dato curioso "
+                        f"numerado como #{i} sobre "
+                        "la ciudad de Granada." + NT),
+        }],
+    )
+    t = time.perf_counter() - t0
+    print(f"  petición {i:>2} "
+          f"terminada a los {t:5.1f} s")
+    return r.usage.completion_tokens if r.usage else 0
+\end{lstlisting}
+		\end{column}
+		\begin{column}{0.4\textwidth}
+			\footnotesize
+			\begin{itemize}
+				\item Cada tarea pide un dato sobre Granada; \texttt{max\_tokens=120} limita la salida.
+				\item \texttt{await} deja avanzar otras tareas mientras espera la respuesta.
+				\item Se imprime cuándo acaba cada petición desde el inicio común, no su duración individual.
+				\item Devuelve tokens de salida; si falta \texttt{usage}, devuelve 0.
+			\end{itemize}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Demo 02: ejecutar y leer el resultado}{Desde \texttt{miia-demo}, con los servicios y el modelo preparados}
+	\begin{lstlisting}[language={}]
+docker compose run --rm lab python ejemplos/02_concurrencia.py 8
+\end{lstlisting}
+	\begin{columns}[T]
+		\begin{column}{0.55\textwidth}
+			{\scriptsize\textbf{Salida real de una ejecución local:}}
+			\begin{lstlisting}[language={}]
+Lanzando 8 peticiones a la vez…
+  petición  3 terminada a los   5.5 s
+  petición  4 terminada a los   6.9 s
+  petición  1 terminada a los  11.5 s
+  petición  2 terminada a los  12.1 s
+  petición  7 terminada a los  17.6 s
+  petición  5 terminada a los  22.7 s
+  petición  8 terminada a los  24.5 s
+  petición  6 terminada a los  28.0 s
+Total: 586 tokens en 28.0 s → 21.0 tokens/s agregados
+\end{lstlisting}
+		\end{column}
+		\begin{column}{0.43\textwidth}
+			\footnotesize
+			\begin{itemize}
+				\item Terminan en distinto orden y tiempo; la última termina a los 28 s.
+				\item $586 / 28{,}0 \approx 20{,}9$ tokens/s \textbf{entre todas}; el programa usa el tiempo sin redondear y muestra 21,0.
+				\item Sin estadísticas de uso, el total puede quedar infravalorado.
+				\item Repite con 1, 2 y 8: tiempos y respuestas varían según la carga y el hardware.
+			\end{itemize}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{PagedAttention y RadixAttention}{Dos formas complementarias de aprovechar la caché KV}
+	{\footnotesize Ejemplo: \textcolor{nA}{instrucción común} y preguntas distintas, \textcolor{rojoUGR}{A} y \textcolor{nB}{B}.}
+	\vspace{2pt}
+	\begin{columns}[T]
+		\begin{column}{0.49\textwidth}
+			\centering
+			\textbf{\textcolor{nA}{PagedAttention}}\\[-1pt]
+			{\scriptsize Organiza la caché KV en bloques físicos.}
+
+			\adjustbox{max width=\linewidth}{%
+				\begin{tikzpicture}[every node/.append style={font=\scriptsize}]
+					\node[anchor=west] at (0,2.1) {Petición A:};
+					\node[bbx, minimum width=0.85cm, minimum height=0.55cm] at (2.1,2.1) {1};
+					\node[rbx, minimum width=0.85cm, minimum height=0.55cm] at (3.15,2.1) {3};
+					\node[anchor=west] at (0,1.35) {Petición B:};
+					\node[bbx, minimum width=0.85cm, minimum height=0.55cm] at (2.1,1.35) {4};
+					\node[gbx, minimum width=0.85cm, minimum height=0.55cm] at (3.15,1.35) {2};
+					\node[anchor=west] at (0,0.65) {VRAM:};
+					\node[bbx, minimum width=0.85cm, minimum height=0.55cm] at (2.1,0.65) {1};
+					\node[gbx, minimum width=0.85cm, minimum height=0.55cm] at (3.15,0.65) {2};
+					\node[rbx, minimum width=0.85cm, minimum height=0.55cm] at (4.2,0.65) {3};
+					\node[bbx, minimum width=0.85cm, minimum height=0.55cm] at (5.25,0.65) {4};
+					\node[anchor=west, text=darkgray] at (0,0) {Números: bloques físicos, no necesariamente contiguos.};
+				\end{tikzpicture}}
+		\end{column}
+		\begin{column}{0.49\textwidth}
+			\centering
+			\textbf{\textcolor{rojoUGR}{RadixAttention}}\\[-1pt]
+			{\scriptsize Indexa y reutiliza prefijos comunes en un árbol.}
+
+			\adjustbox{max width=\linewidth}{%
+				\begin{tikzpicture}[every node/.append style={font=\scriptsize}]
+					\node[bbx, minimum width=2.7cm, minimum height=0.65cm] (prefix) at (2.5,2.0) {KV: instrucción común};
+					\node[rbx, minimum width=1.9cm, minimum height=0.65cm] (a) at (1.1,0.7) {KV: pregunta A};
+					\node[gbx, minimum width=1.9cm, minimum height=0.65cm] (b) at (3.9,0.7) {KV: pregunta B};
+					\draw[ar] (prefix.south) -- (a.north);
+					\draw[ar] (prefix.south) -- (b.north);
+					\node[anchor=west, text=darkgray] at (0,0) {Reutiliza el prefijo y evita repetir su prefill.};
+				\end{tikzpicture}}
+		\end{column}
+	\end{columns}
+	\keymsg{Ambos pueden compartir caché y son complementarios.}
+\end{frame}
+
+\begin{frame}{El panorama de motores}{Los mismos modelos, con distintos compromisos}
+	\centering\footnotesize
+	\setlength{\tabcolsep}{3pt}
+	\begin{tabular}{@{}R{2.1cm}R{6.2cm}R{3.9cm}@{}}
+		\toprule
+		\textbf{Motor}                     & \textbf{Puntos fuertes}                    & \textbf{Uso típico}             \\
+		\midrule
+		\textbf{\textcolor{rojoUGR}{vLLM}} & Batching continuo, PagedAttention, JSON    & Servicio multiusuario en GPU    \\[1pt]
+		\textbf{SGLang}                    & Caché de prefijos, generación estructurada & Servicio de alto rendimiento    \\[1pt]
+		\textbf{llama.cpp}                 & Cuantizados GGUF: CPU, Apple Silicon, GPU  & Portátiles y un solo usuario    \\[1pt]
+		\textbf{Ollama}                    & Gestión fácil de modelos y API local       & Desarrollo local y nuestra demo \\[1pt]
+		\textbf{TensorRT-LLM}              & Kernels optimizados para NVIDIA            & Exprimir una flota NVIDIA fija  \\
+		\bottomrule
+	\end{tabular}
+	\keymsg{Todos pueden ofrecerse tras una API compatible con OpenAI: al cliente le da igual.}
+\end{frame}
+
+\begin{frame}{Elegir un modelo}{Primero que quepa, luego la calidad, luego la licencia}
+	\begin{columns}[T]
+		\begin{column}{0.5\textwidth}
+			\footnotesize
+			\begin{itemize}
+				\item \textbf{Tamaño} frente a VRAM y concurrencia.
+				\item \textbf{Cuantización} y \textbf{contexto} que realmente necesitas.
+				\item \textbf{Especialización}: general, código, visión, embeddings.
+				\item \textbf{Licencia}: pesos abiertos $\neq$ código abierto.
+				\item \textbf{Idioma}: pruébalo en español, no solo en inglés.
+			\end{itemize}
+		\end{column}
+		\begin{column}{0.46\textwidth}
+			\themeblock{rojoUGR}{En MiIA}{Qwen como modelo general; Qwen Code para programar; visión (Llama~3.2 Vision, Qwen2.5-VL) para documentos.}
+		\end{column}
+	\end{columns}
+	\keymsg{Empieza por el modelo más pequeño que haga el trabajo; mide; después escala.}
+\end{frame}
+
+\begin{frame}{Práctica: mídelo tú mismo}{Demo del bloque 2}
+	\detailbox{nB}{Ejecuta}{\texttt{docker compose run --rm lab python ejemplos/01\_hola\_api.py}\\
+		\texttt{docker compose run --rm lab python ejemplos/02\_concurrencia.py 8}}
+	\begin{itemize}
+		\small
+		\item Lee el tiempo hasta el primer token y los tokens/s de una sola petición.
+		\item Lanza 8 peticiones a la vez: con Ollama en CPU se encolan; con el perfil vLLM, el rendimiento agregado crece.
+		\item Con GPU: abre \texttt{localhost:8000/metrics} y observa la cola y el uso de la caché KV.
+	\end{itemize}
+\end{frame}

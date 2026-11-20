@@ -1,8 +1,8 @@
-"""04 · Un agente mínimo con herramientas locales (leer/listar/escribir ficheros).
+"""05 · Un agente mínimo con herramientas locales (leer/listar/escribir ficheros).
 
-    python ejemplos/04_agente_minimo.py                 # tarea por defecto; pide confirmación al escribir
-    python ejemplos/04_agente_minimo.py --auto          # sin confirmación (¡solo en el sandbox!)
-    python ejemplos/04_agente_minimo.py "tu tarea..."
+    python ejemplos/05_agente_minimo.py                 # tarea por defecto; pide confirmación al escribir
+    python ejemplos/05_agente_minimo.py --auto          # sin confirmación (¡solo en el sandbox!)
+    python ejemplos/05_agente_minimo.py "tu tarea..."
 
 Ideas que muestra: bucle agente, sandbox de rutas, permisos (confirmación humana) y
 skills (instrucciones que el agente carga solo cuando la tarea las necesita).

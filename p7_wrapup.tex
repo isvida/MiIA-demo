@@ -1,0 +1,50 @@
+%============================================================ BLOQUE 7 · Conclusiones (10 min)
+\ugrsection{07}{Conclusiones y preguntas}{Inicio: 1:50 · 10 min\\Lo que conviene recordar}
+
+\begin{frame}{Para llevarse a casa}{Tres mensajes}
+  \begin{enumerate}
+    \item Trata el LLM como \textbf{infraestructura}: controla el camino de los datos, estandariza en la API compatible con OpenAI y pon una \textbf{pasarela} delante.
+    \item La \textbf{memoria y la concurrencia} deciden qué puedes servir. \textbf{Restringe las salidas, valida y monitoriza}; empieza en pequeño y escala en horizontal.
+    \item Un agente es un \textbf{bucle con herramientas}: MCP y las skills lo amplían; los permisos y el sandbox lo contienen.
+  \end{enumerate}
+  \keymsg{\textbf{Mensaje final:} el valor no está solo en el modelo, sino en la infraestructura y las prácticas que lo rodean.}
+\end{frame}
+
+\begin{frame}{Límites y problemas abiertos}{Dónde estamos y qué queda por hacer}
+  \begin{columns}[T]
+    \begin{column}{0.5\textwidth}
+      \themeblock{nBrown}{Modelos}{%
+        Alucinaciones y conocimiento desactualizado.\\
+        Los modelos abiertos van por detrás de la frontera en razonamiento difícil.\\
+        Los modelos pequeños fallan con herramientas en tareas largas.}
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      \themeblock{nD}{Operación}{%
+        Coste de GPU, energía y adquisición.\\
+        Mantenimiento constante: modelos, motores, parches de seguridad.\\
+        La evaluación y el cumplimiento del AI Act exigen un esfuerzo real.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Pruébalo tú mismo}{Ejercicios con el kit de demo y dónde seguir leyendo}
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+      \small
+      \begin{enumerate}
+        \item Añade una herramienta a \texttt{mcp/server.py}: el agente la descubre solo.
+        \item Registra un segundo modelo en LiteLLM.
+        \item Cambia el esquema de \texttt{03} para otro documento.
+        \item Escribe tu propia skill en \texttt{workspace/skills/}.
+        \item Prueba un modelo más grande con las herramientas.
+      \end{enumerate}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \themeblock{rojoUGR}{Documentación}{%
+        \texttt{docs.vllm.ai}\\
+        \texttt{docs.litellm.ai}\\
+        \texttt{modelcontextprotocol.io}\\
+        \texttt{docs.openwebui.com}}
+    \end{column}
+  \end{columns}
+\end{frame}

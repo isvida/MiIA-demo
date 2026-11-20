@@ -1,0 +1,565 @@
+%==============================================================================
+%  latexUGR.sty  —  Estilo Beamer "UGR" · v2.0 (divulgación)
+%
+%  Evolución del estilo de la presentación P-SEA 2026 (Vidal-Daza et al.)
+%  pensada para charlas de divulgación tecnológica: menos texto, jerarquía
+%  muy marcada, cifras y mensajes grandes y un único color de acento.
+%
+%  Se mantiene la esencia de la v1: rojo UGR (#d53044) + grises, tipografía
+%  Roboto, viñetas cuadradas, barra vertical junto al título, número de
+%  página en rojo y el "cuadrado" como motivo gráfico. Todos los comandos de
+%  la v1 siguen funcionando con la misma sintaxis.
+%
+%  USO MÍNIMO
+%  ----------
+%     \documentclass[aspectratio=169,11pt]{beamer}
+%     \usepackage[utf8]{inputenc}
+%     \usepackage[spanish,es-noshorthands]{babel}
+%     \usepackage{latexUGR}
+%     \ugrfooter{Texto del pie}          % opcional
+%     \ugrlogo{imagenes/logoUGR.png}     % opcional (logo en el pie y portada)
+%     \ugrcover{imagenes/portada.jpg}    % opcional (imagen en la portada)
+%
+%  OPCIONES DEL PAQUETE
+%     [nofonts]      no carga Roboto (usa la fuente que haya fijado el usuario)
+%     [light]        cuerpo de texto en Roboto Light (más ligero en pantalla)
+%     [noprogress]   oculta la barra de progreso del pie
+%     [nosection]    oculta el nombre de la sección arriba a la derecha
+%     [notikz]       se ignora (compatibilidad v1: el estilo necesita tikz)
+%
+%  COMANDOS (ver plantillaUGR.tex para ejemplos)
+%   Configuración
+%     \ugrfooter{texto}                     texto a la izquierda del pie
+%     \ugrlogo[altura]{fichero}             logo en el pie y en la portada
+%     \ugrcover{fichero}                    imagen del panel derecho de portada
+%   Frames completos (se usan FUERA de un frame)
+%     \ugrtitleframe[etiquetas]             portada (+ fila de \ugrtag)
+%     \ugrsection{01}{Título}{Sub}          separador de sección a sangre
+%     \ugrstatement[color]{frase}{fuente}   una sola idea, a tamaño enorme
+%     \ugrimageframe{fichero}{título}{pie}  imagen a pantalla completa
+%     \ugrthanks{título}{sub}{texto}{logos} cierre
+%   Elementos dentro de un frame
+%     \keymsg{texto}                        idea clave al pie (1 por slide)
+%     \bigstat[color]{cifra}{explicación}   cifra grande con contexto
+%     \ugrcard[color]{n}{título}{texto}     tarjeta con distintivo cuadrado
+%     \ugrsteps{A/desc, B/desc, ...}        proceso horizontal numerado
+%     \ugrcompare{tít. A}{A}{tít. B}{B}     comparación "antes / ahora"
+%     \ugrfact[etiqueta]{texto}             "¿Sabías que…?"
+%     \ugrquote{cita}{autor}                cita destacada
+%     \ugrtag{texto}                        etiqueta tipo píldora
+%     \hlugr{texto}                         subrayado tipo rotulador
+%     \themeblock{color}{título}{cuerpo}    caja con color de acento (v1)
+%     \detailbox{color}{etiqueta}{texto}    caja de detalle centrada (v1)
+%     \appchip{texto}                       chip redondeado (v1)
+%     \afil{nombre}{descripción}            fila de afiliación (v1)
+%     \figph[ancho]{texto}                  marcador de figura pendiente (v1)
+%
+%  Colores: rojoUGR, ugrInk, ugrText, ugrSand, ugrLine, darkgray, lightgray,
+%  nA..nE (azul, verde, rojo, morado, ámbar) y los de la v1.
+%==============================================================================
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{latexUGR}[2026/10/28 v2.0 Estilo Beamer UGR (divulgacion)]
+
+%------------------------------------------------------------------ opciones
+\newif\ifugr@fonts    \ugr@fontstrue
+\newif\ifugr@light    \ugr@lightfalse
+\newif\ifugr@progress \ugr@progresstrue
+\newif\ifugr@secthead \ugr@sectheadtrue
+\DeclareOption{nofonts}{\ugr@fontsfalse}
+\DeclareOption{light}{\ugr@lighttrue}
+\DeclareOption{noprogress}{\ugr@progressfalse}
+\DeclareOption{nosection}{\ugr@sectheadfalse}
+\DeclareOption{notikz}{\PackageWarning{latexUGR}{La opcion 'notikz' se ignora en la v2}}
+\ProcessOptions\relax
+
+%------------------------------------------------------------------ paquetes
+\RequirePackage{graphicx}
+\RequirePackage{booktabs}
+\RequirePackage{amsmath}
+\RequirePackage{adjustbox}
+\RequirePackage{xcolor}
+\RequirePackage{tikz}
+\usetikzlibrary{shapes,arrows.meta,positioning,calc,fit,backgrounds}
+\@ifpackageloaded{babel}{\usetikzlibrary{babel}}{}
+
+%------------------------------------------------------------------ tema base
+\usetheme{Madrid}
+\setbeamertemplate{blocks}[rounded][shadow=false]
+\setbeamertemplate{navigation symbols}{}
+\setbeamersize{text margin left=1.1cm, text margin right=1.1cm}
+
+%------------------------------------------------------------------ colores
+% Paleta institucional
+\definecolor{rojoUGR}{HTML}{d53044}
+\definecolor{rojoDark}{HTML}{A8202F}  % rojo profundo (fondos y texto sobre claro)
+\definecolor{ugrInk}{HTML}{25272A}    % títulos y cifras
+\definecolor{ugrText}{HTML}{4A4D50}   % texto de cuerpo (más contraste que v1)
+\definecolor{darkgray}{HTML}{737572}  % gris UGR (textos secundarios)
+\definecolor{ugrSand}{HTML}{F4F3F1}   % fondo neutro cálido de cajas
+\definecolor{ugrLine}{HTML}{E2E1DE}   % filetes y bordes
+\definecolor{text}{HTML}{99a6ad}
+\definecolor{lightgray}{gray}{0.95}
+\definecolor{lavendergray}{rgb}{0.77, 0.76, 0.82}
+
+% Colores de acento (v1, se conservan)
+\definecolor{nciBlue}{HTML}{185FA5}
+\definecolor{nciGreen}{HTML}{3AAA3A}
+\definecolor{nciRed}{HTML}{CB2C30}
+\definecolor{blueAttr}{HTML}{185FA5}
+\definecolor{greenDisp}{HTML}{3AAA3A}
+\definecolor{redRep}{HTML}{CB2C30}
+\definecolor{purpleQ}{HTML}{6B4BAE}
+\definecolor{grayLayer}{gray}{0.72}
+\definecolor{tanLayer}{HTML}{C8B08A}
+\definecolor{eqBg}{HTML}{FDECEC}
+\definecolor{eqText}{HTML}{7A1C1C}
+\definecolor{nGreen}{HTML}{3B8C2A}
+\definecolor{nBrown}{HTML}{8a5a2b}
+\definecolor{nA}{HTML}{185FA5}
+\definecolor{nB}{HTML}{3B8C2A}
+\definecolor{nC}{HTML}{d53044}
+\definecolor{nD}{HTML}{534AB7}
+\definecolor{nE}{HTML}{B07A17}
+
+% Colores de beamer
+\colorlet{beamer@blendedblue}{rojoUGR}
+\setbeamercolor{normal text}{fg=ugrText,bg=white}
+\setbeamercolor{structure}{fg=rojoUGR}
+\setbeamercolor{alerted text}{fg=rojoUGR}
+\setbeamerfont{alerted text}{series=\bfseries}
+\setbeamercolor{block title}{bg=ugrInk,fg=white}
+\setbeamercolor{block body}{bg=ugrSand,fg=ugrText}
+\setbeamercolor{block title alerted}{bg=rojoUGR,fg=white}
+\setbeamercolor{block body alerted}{bg=rojoUGR!7,fg=ugrText}
+\setbeamercolor{block title example}{bg=nB,fg=white}
+\setbeamercolor{block body example}{bg=nB!7,fg=ugrText}
+
+%------------------------------------------------------------------ fuentes
+\ifugr@fonts
+  \IfFileExists{roboto.sty}{%
+    \ifugr@light
+      \RequirePackage[sfdefault,light]{roboto}%
+    \else
+      \RequirePackage[sfdefault]{roboto}%
+    \fi
+  }{%
+    \PackageWarning{latexUGR}{Paquete 'roboto' no encontrado; uso Helvetica}%
+    \RequirePackage[scaled=0.92]{helvet}%
+    \renewcommand{\familydefault}{\sfdefault}%
+  }
+  \RequirePackage[T1]{fontenc}
+\fi
+\setbeamerfont{frametitle}{size=\LARGE,series=\bfseries}
+\setbeamerfont{framesubtitle}{size=\normalsize,series=\mdseries}
+\setbeamercolor{frametitle}{fg=ugrInk}
+\setbeamercolor{framesubtitle}{fg=darkgray}
+
+%------------------------------------------------------------------ viñetas
+% Cuadrado rojo (seña de identidad) y más aire entre elementos.
+\setbeamertemplate{itemize item}{%
+  \raisebox{0.18em}{\color{rojoUGR}\rule{0.42em}{0.42em}}}
+\setbeamertemplate{itemize subitem}{%
+  \raisebox{0.24em}{\color{darkgray}\rule{0.3em}{0.3em}}}
+\setbeamertemplate{itemize subsubitem}{\color{darkgray}\textendash}
+\setbeamercolor{enumerate item}{fg=white,bg=rojoUGR}
+\setbeamertemplate{enumerate item}{%
+  \tikz[baseline=(n.base)]\node[fill=rojoUGR,text=white,font=\scriptsize\bfseries,
+     minimum size=1.25em,inner sep=0pt,rounded corners=1.5pt](n){\insertenumlabel};}
+\setbeamertemplate{enumerate subitem}{\color{rojoUGR}\bfseries\insertsubenumlabel.}
+\addtobeamertemplate{itemize/enumerate body begin}{}{%
+  \setlength{\itemsep}{0.55em}\setlength{\parskip}{0pt}}
+\addtobeamertemplate{itemize/enumerate subbody begin}{}{%
+  \setlength{\itemsep}{0.25em}\small}
+
+%------------------------------------------------------------------ cabecera
+% Nombre de la sección actual, discreto, arriba a la derecha.
+\setbeamertemplate{headline}{%
+  \ifugr@secthead
+    \ifx\insertsectionhead\@empty\else
+      \vskip0.32cm%
+      \hfill{\color{darkgray}\scriptsize\MakeUppercase{\insertsectionhead}}%
+      \hspace{5pt}{\color{rojoUGR}\rule{4pt}{4pt}}\hspace{1.1cm}%
+    \fi
+  \fi}
+
+%------------------------------------------------------------------ pie
+\def\ugr@footertext{}
+\def\ugr@logo{}
+\def\ugr@logofile{}
+\def\ugr@logohgt{}
+\def\ugr@cover{}
+\newcommand{\ugrfooter}[1]{\renewcommand{\ugr@footertext}{#1}}
+\newcommand{\ugrlogo}[2][0.5cm]{%
+  \def\ugr@logofile{#2}%
+  \def\ugr@logohgt{#1}%
+  \renewcommand{\ugr@logo}{\includegraphics[height=#1]{#2}\hspace{6pt}}}
+\newcommand{\ugrcover}[1]{\def\ugr@cover{#1}}
+
+% Pie: logo a la izquierda | texto (tiny) + número en píldora roja, a la derecha | barra de progreso
+\setbeamertemplate{footline}{%
+  \begin{tikzpicture}[x=\paperwidth]
+    \useasboundingbox (0,0) rectangle (1,0.85cm);
+    \ifx\ugr@logofile\@empty\else
+      \node[anchor=west,inner sep=0pt] at (1.1cm,0.42cm)
+        {\includegraphics[height=\ugr@logohgt]{\ugr@logofile}};
+    \fi
+    % bloque derecho: texto (tiny) + píldora con el número, alineados a la derecha
+    % (tikzpicture anidada: con unidades x no por defecto no se resuelven anclas de nodos)
+    \node[anchor=east,inner sep=0pt] at ([xshift=-1.1cm]1,0.42cm) {%
+      \begin{tikzpicture}[baseline=(pg.base)]
+        \node[anchor=east,fill=rojoUGR,text=white,rounded corners=5pt,
+              font=\scriptsize\bfseries,inner xsep=6pt,inner ysep=2.5pt,
+              minimum height=0.42cm] (pg) at (0,0)
+            {\insertframenumber};
+        \node[anchor=east,inner sep=0pt] at ([xshift=-8pt]pg.west)
+          {\tiny\color{darkgray}\ugr@footertext};
+      \end{tikzpicture}%
+    };
+    \ifugr@progress
+      \pgfmathsetmacro{\ugr@prog}{min(1,\insertframenumber/max(1,\inserttotalframenumber))}
+      \fill[ugrLine] (0,0) rectangle (1,2pt);
+      \fill[rojoUGR] (0,0) rectangle (\ugr@prog,2pt);
+    \fi
+  \end{tikzpicture}%
+}
+
+%------------------------------------------------------------------ título de frame
+% Barra vertical (ahora roja y redondeada) + título grande + subtítulo gris.
+\setbeamertemplate{frametitle}{%
+  \vskip0.15cm%
+  \begin{tikzpicture}
+    \node[anchor=north west,inner sep=0pt,text width=\dimexpr\textwidth-14pt\relax,
+          align=flush left] (t) at (14pt,0)
+      {\usebeamerfont{frametitle}\usebeamercolor[fg]{frametitle}%
+       \strut\insertframetitle\strut};
+    \ifx\insertframesubtitle\@empty
+      \coordinate (b) at (t.south west);
+    \else
+      \node[anchor=north west,inner sep=0pt,text width=\dimexpr\textwidth-14pt\relax,
+            align=flush left] (b) at ([yshift=-2pt]t.south west)
+        {\usebeamerfont{framesubtitle}\usebeamercolor[fg]{framesubtitle}%
+         \strut\insertframesubtitle\strut};
+      \coordinate (b) at (b.south west);
+    \fi
+    \coordinate (bb) at (0,0 |- b);
+    \fill[rojoUGR,rounded corners=1.5pt] (0,-1pt) rectangle ([xshift=4pt]bb);
+  \end{tikzpicture}%
+  \vskip0.35cm%
+}
+
+%==============================================================================
+%  ELEMENTOS DENTRO DE UN FRAME
+%==============================================================================
+
+% Etiqueta tipo píldora:  \ugrtag{texto}
+\newcommand{\ugrtag}[1]{%
+  \tikz[baseline=(g.base)]\node[draw=rojoUGR,line width=0.7pt,rounded corners=7pt,
+     text=rojoUGR,font=\footnotesize\bfseries,inner xsep=8pt,inner ysep=3pt](g){#1};}
+
+% Subrayado tipo rotulador:  \hlugr{texto}  (texto corto, una línea)
+\newcommand{\hlugr}[1]{%
+  \tikz[baseline=(h.base)]{\node[inner sep=1pt](h){#1};
+    \fill[rojoUGR,opacity=0.18] ([yshift=-1pt]h.south west) rectangle
+                                ([yshift=-0.35em]h.east);}}
+
+% Idea clave al pie del frame:  \keymsg{texto}
+\newcommand{\keymsg}[1]{%
+  \par\vfill
+  \noindent\begin{tikzpicture}
+    \node[fill=rojoUGR!7,rounded corners=4pt,inner xsep=12pt,inner ysep=8pt,
+          text width=\dimexpr\linewidth-24pt-16pt\relax,align=flush left,
+          xshift=16pt,anchor=west] (k) at (0,0)
+      {\color{ugrInk}\small #1};
+    \fill[rojoUGR,rounded corners=1.5pt] ([xshift=-16pt]k.west) ++(0,-5pt)
+      rectangle ++(9pt,10pt);
+  \end{tikzpicture}\par\vspace{2pt}%
+}
+
+% Cifra grande con contexto:  \bigstat[color]{cifra}{explicación}
+\newcommand{\bigstat}[3][rojoUGR]{%
+  \begin{tikzpicture}
+    \node[anchor=north west,inner sep=0pt,text width=\linewidth,align=flush left] (n) at (0,0)
+       {\color{#1}\fontsize{32}{36}\selectfont\bfseries #2};
+    \node[anchor=north west,inner sep=0pt,text width=\linewidth,align=flush left]
+      at ([yshift=-6pt]n.south west) {\color{ugrText}\small #3};
+    \fill[#1] (0,8pt) rectangle (22pt,11pt);
+  \end{tikzpicture}%
+}
+
+% Tarjeta numerada:  \ugrcard[color]{1}{Título}{Texto breve}
+\newcommand{\ugrcard}[4][rojoUGR]{%
+  \begin{tikzpicture}
+    \node[anchor=north west,fill=ugrSand,rounded corners=5pt,
+          text width=\dimexpr\linewidth-24pt\relax,inner sep=10pt,align=flush left,
+          minimum height=2.9cm] (c) at (0,0)
+       {\rule{0pt}{0.9cm}\par\vspace{2pt}%
+       {\color{ugrInk}\normalsize\bfseries #3}\par\smallskip
+       {\color{ugrText}\footnotesize #4}};
+    \node[anchor=north west,fill=#1,text=white,font=\small\bfseries,
+          minimum size=0.75cm,rounded corners=2pt]
+      at ([xshift=12pt,yshift=-12pt]c.north west) {#2};
+  \end{tikzpicture}%
+}
+
+% Proceso horizontal:  \ugrsteps{Idea/Una frase, Datos/Otra frase, ...}
+% (usa llaves si un texto lleva comas:  {Uno, dos}/{tres, cuatro})
+\newcounter{ugr@nsteps}
+\newcommand{\ugrsteps}[1]{%
+  \setcounter{ugr@nsteps}{0}%
+  \foreach \ugr@a/\ugr@b in {#1}{\stepcounter{ugr@nsteps}}%
+  \par\noindent
+  \begin{tikzpicture}
+    \pgfmathsetlengthmacro{\ugr@w}{\linewidth/\value{ugr@nsteps}}
+    \draw[ugrLine,line width=2pt] (0.5*\ugr@w,0) -- ({(\value{ugr@nsteps}-0.5)*\ugr@w},0);
+    \foreach \ugr@a/\ugr@b [count=\ugr@i] in {#1}{%
+      \node[circle,fill=rojoUGR,text=white,font=\footnotesize\bfseries,minimum size=0.65cm,
+            draw=white,line width=2pt] at ({(\ugr@i-0.5)*\ugr@w},0) {\ugr@i};
+      \node[anchor=north,text width=\dimexpr\ugr@w-10pt\relax,align=flush center,inner sep=0pt]
+        at ({(\ugr@i-0.5)*\ugr@w},-0.45cm)
+        {{\color{ugrInk}\bfseries\footnotesize\ugr@a}\\[2pt]{\color{ugrText}\footnotesize\ugr@b}};
+    }
+  \end{tikzpicture}\par
+}
+
+% Comparación:  \ugrcompare{Antes}{texto}{Ahora}{texto}
+\newcommand{\ugrcompare}[4]{%
+  \par\noindent
+  \begin{tikzpicture}
+    \pgfmathsetlengthmacro{\ugr@w}{(\linewidth-1.2cm)/2}
+    \node[anchor=north west,fill=ugrSand,rounded corners=5pt,inner sep=12pt,
+          text width=\dimexpr\ugr@w-24pt\relax,minimum height=3.4cm,align=flush left] (A) at (0,0)
+      {{\color{darkgray}\scriptsize\bfseries\MakeUppercase{#1}}\par\medskip
+       {\color{ugrText}\small #2}};
+    \node[anchor=north west,fill=rojoUGR!8,draw=rojoUGR,line width=0.8pt,
+          rounded corners=5pt,inner sep=12pt,text width=\dimexpr\ugr@w-24pt\relax,
+          minimum height=3.4cm,align=flush left] (B) at ([xshift=1.2cm]A.north east)
+      {{\color{rojoUGR}\scriptsize\bfseries\MakeUppercase{#3}}\par\medskip
+       {\color{ugrInk}\small #4}};
+    \node[circle,fill=white,draw=ugrLine,line width=1pt,minimum size=0.8cm,
+          font=\scriptsize\bfseries,text=ugrInk] at ($(A.east)!0.5!(B.west)$)
+      {$\rightarrow$};
+  \end{tikzpicture}\par
+}
+
+% "¿Sabías que…?":  \ugrfact[etiqueta]{texto}
+\newcommand{\ugrfact}[2][¿Sabías que…?]{%
+  \par\noindent
+  \begin{tikzpicture}
+    \node[anchor=north west,inner xsep=14pt,inner ysep=12pt,
+          text width=\dimexpr\linewidth-28pt-1.4cm\relax,align=flush left] (f) at (1.4cm,0)
+      {{\color{rojoUGR!55!white}\scriptsize\bfseries\MakeUppercase{#1}}\par\smallskip
+       {\color{white}\normalsize #2}};
+    \begin{scope}[on background layer]
+      \fill[ugrInk,rounded corners=5pt] (0,0) rectangle (f.south east);
+      \fill[rojoUGR,rounded corners=5pt] (0,0) rectangle (f.south west);
+      \fill[rojoUGR] ([xshift=-6pt]f.north west) rectangle (f.south west);
+    \end{scope}
+    \node[text=white,font=\huge\bfseries] at ($(0,0)!0.5!(f.south west)$) {?};
+  \end{tikzpicture}\par
+}
+
+% Cita destacada:  \ugrquote{texto}{autor}
+\newcommand{\ugrquote}[2]{%
+  \par\noindent
+  \begin{tikzpicture}
+    \node[anchor=north west,inner sep=0pt,text width=\dimexpr\linewidth-1.6cm\relax,
+          align=flush left] (q) at (1.6cm,0)
+      {{\color{ugrInk}\Large #1}\par\medskip
+       {\color{darkgray}\small\textemdash\ #2}};
+    \node[anchor=north west,inner sep=0pt,text=rojoUGR,
+          font=\fontsize{72}{72}\selectfont\bfseries] at (0,0.25cm) {``};
+  \end{tikzpicture}\par
+}
+
+% Caja temática:  \themeblock{color}{título}{cuerpo}   (v1, ahora plana)
+\newcommand{\themeblock}[3]{%
+  \begin{tikzpicture}
+    \node[rounded corners=5pt,fill=#1!7,
+          text width=\dimexpr\linewidth-22pt\relax,inner sep=11pt,
+          align=flush left] {%
+      {\color{#1}\rule[0.08em]{0.5em}{0.5em}\hspace{5pt}\small\bfseries #2}\\[4pt]
+      {\color{ugrText}\footnotesize #3}};
+  \end{tikzpicture}%
+}
+
+% Caja de detalle centrada:  \detailbox{color}{etiqueta}{texto}   (v1)
+\newcommand{\detailbox}[3]{%
+  \begin{center}
+  \begin{tikzpicture}
+    \node[rounded corners=5pt,fill=#1!7,text width=0.86\textwidth,inner sep=12pt,
+          align=flush left] {%
+      {\color{#1}\scriptsize\bfseries\MakeUppercase{#2}}\\[4pt]
+      {\color{ugrInk}\normalsize #3}};
+  \end{tikzpicture}
+  \end{center}%
+}
+\newcommand{\hkdetail}{\detailbox}% alias de compatibilidad
+
+% Chip de aplicación:  \appchip{texto\\ opcional}   (v1)
+\newcommand{\appchip}[1]{%
+  \begin{tikzpicture}
+    \node[rounded corners=9pt,fill=rojoUGR!8,minimum height=0.6cm,inner xsep=8pt,
+          inner ysep=4pt,align=center,text=rojoDark,font=\scriptsize\bfseries]{#1};
+  \end{tikzpicture}%
+}
+
+% Fila de afiliación:  \afil{Institución}{Detalle}   (v1)
+\newcommand{\afil}[2]{%
+  \par\smallskip
+  {\color{rojoUGR}\rule[0.1em]{0.4em}{0.4em}}\hspace{5pt}%
+  {\color{ugrInk}\small\bfseries #1}\\[1pt]
+  \hspace*{0.4em}\hspace{5pt}{\color{darkgray}\footnotesize #2}%
+}
+
+% Marcador de figura pendiente:  \figph[ancho]{descripción}   (v1)
+\newcommand{\figph}[2][0.9\textwidth]{%
+  \begin{tikzpicture}
+    \node[draw=darkgray!50,dashed,line width=0.8pt,fill=ugrSand,rounded corners=5pt,
+          minimum width=#1,minimum height=0.45\textheight,
+          align=center,text=darkgray,font=\small] {#2};
+  \end{tikzpicture}%
+}
+
+%==============================================================================
+%  FRAMES COMPLETOS  (se usan fuera de \begin{frame}...\end{frame})
+%==============================================================================
+
+% Mosaico de cuadrados (motivo gráfico de portada, secciones y cierre)
+% \ugr@mosaic[color]{(coordenada esquina sup. izq.)}{columnas}{filas}{lado}
+\newcommand{\ugr@mosaic}[5][rojoUGR]{%
+  \path #2 coordinate (ugr@m0);
+  \foreach \i in {1,...,#3}{%
+    \foreach \j in {1,...,#4}{%
+      \pgfmathtruncatemacro{\k}{mod(\i*3+\j*5+\i*\j,9)}%
+      \ifcase\k \def\op{0}\or\def\op{0.10}\or\def\op{0.25}\or\def\op{1}%
+        \or\def\op{0}\or\def\op{0.45}\or\def\op{0.10}\or\def\op{0.70}\or\def\op{0}\fi
+      \fill[#1,fill opacity=\op,rounded corners=1pt]
+        ($(ugr@m0)+({(\i-1)*(#5+0.12cm)},{-(\j-1)*(#5+0.12cm)})$)
+        rectangle ++(#5,-#5);
+    }}%
+}
+
+% Portada.  \ugrtitleframe[ \ugrtag{IA}\ \ugrtag{Datos} ]
+\newcommand{\ugrtitleframe}[1][]{%
+  \def\ugr@chips{#1}%
+  {\setbeamertemplate{footline}{}\setbeamertemplate{headline}{}%
+   \begin{frame}[plain]
+   \begin{tikzpicture}[remember picture,overlay]
+     % panel derecho: imagen o mosaico
+     \ifx\ugr@cover\@empty
+       \fill[ugrSand] ([xshift=-0.36\paperwidth]current page.north east)
+         rectangle (current page.south east);
+       \ugr@mosaic{([xshift=-0.36\paperwidth+0.9cm,yshift=-0.9cm]current page.north east)}{6}{9}{0.62cm}
+     \else
+       \node[anchor=north east,inner sep=0pt] at (current page.north east)
+         {\adjustbox{min width=0.36\paperwidth,min height=\paperheight,
+            max width=0.36\paperwidth,max height=\paperheight}{%
+            \includegraphics[width=0.36\paperwidth,height=\paperheight,keepaspectratio=false]{\ugr@cover}}};
+     \fi
+     \fill[rojoUGR] ([xshift=-0.36\paperwidth]current page.north east)
+       rectangle ++(4pt,-\paperheight);
+     % bloque de texto (anclado abajo: deja libre la zona del logo)
+     \node[anchor=south west,inner sep=0pt,text width=0.52\paperwidth,align=flush left]
+       (T) at ([xshift=1.1cm,yshift=1.7cm]current page.south west) {%
+       {\color{rojoUGR}\scriptsize\bfseries\MakeUppercase{\insertdate}}\par\vspace{8pt}
+       {\color{ugrInk}\fontsize{26}{29}\selectfont\bfseries\inserttitle\par}
+       \ifx\insertsubtitle\@empty\else
+         \vspace{8pt}{\color{darkgray}\large\insertsubtitle\par}\fi
+       \vspace{14pt}{\color{rojoUGR}\rule{1.2cm}{3pt}}\par\vspace{12pt}
+       {\color{ugrInk}\normalsize\bfseries\insertauthor\par}
+       \vspace{3pt}{\color{darkgray}\footnotesize\insertinstitute\par}
+       \ifx\ugr@chips\@empty\else\vspace{14pt}\ugr@chips\par\fi};
+      \ifx\ugr@logofile\@empty\else
+        \node[anchor=south west,inner sep=0pt]
+          at ([xshift=1.1cm,yshift=0.7cm]current page.south west)
+          {\includegraphics[height=0.75cm]{\ugr@logofile}};
+      \fi
+   \end{tikzpicture}
+   \end{frame}}%
+}
+
+% Separador de sección:  \ugrsection{01}{Título}{subtítulo opcional}
+% (también crea la \section, que aparece arriba a la derecha en los frames)
+\newcommand{\ugrsection}[3]{%
+  \section{#2}%
+  {\setbeamertemplate{footline}{}\setbeamertemplate{headline}{}%
+   \begin{frame}[plain]
+   \begin{tikzpicture}[remember picture,overlay]
+     \fill[rojoUGR] (current page.south west) rectangle (current page.north east);
+     \ugr@mosaic[white]{([xshift=-5.2cm,yshift=-0.9cm]current page.north east)}{6}{3}{0.62cm}
+     \node[anchor=south west,inner sep=0pt,text width=0.7\paperwidth,align=flush left]
+       at ([xshift=1.1cm,yshift=1.3cm]current page.south west) {%
+       {\color{white}\fontsize{60}{60}\selectfont\bfseries #1}\par\vspace{10pt}
+       {\color{white}\fontsize{24}{28}\selectfont\bfseries #2\par}
+       \vspace{6pt}{\color{white!85!rojoUGR}\large #3}};
+   \end{tikzpicture}
+   \end{frame}}%
+}
+
+% Una sola idea, a gran tamaño:  \ugrstatement[color]{frase}{fuente/nota}
+\newcommand{\ugrstatement}[3][rojoUGR]{%
+  {\setbeamertemplate{headline}{}%
+   \begin{frame}
+   \vfill
+   {\color{#1}\rule{1.4cm}{4pt}}\par\vspace{16pt}
+   {\color{ugrInk}\fontsize{28}{34}\selectfont\bfseries #2\par}
+   \vspace{14pt}{\color{darkgray}\small #3\par}
+   \vfill
+   \end{frame}}%
+}
+
+% Imagen a pantalla completa:  \ugrimageframe{fichero}{título}{pie}
+\newcommand{\ugrimageframe}[3]{%
+  {\setbeamertemplate{footline}{}\setbeamertemplate{headline}{}%
+   \begin{frame}[plain]
+   \begin{tikzpicture}[remember picture,overlay]
+     \IfFileExists{#1}{%
+       \node[inner sep=0pt] at (current page.center)
+         {\includegraphics[width=\paperwidth,height=\paperheight,keepaspectratio=false]{#1}};
+     }{%
+       \fill[ugrSand] (current page.south west) rectangle (current page.north east);
+       \node[text=darkgray,font=\small] at ([yshift=1cm]current page.center)
+         {Imagen no encontrada: \texttt{\detokenize{#1}}};
+     }
+     \fill[ugrInk,fill opacity=0.86] (current page.south west)
+       rectangle ([yshift=2.3cm]current page.south east);
+     \fill[rojoUGR] ([yshift=2.3cm]current page.south west) rectangle ++(1.6cm,-4pt);
+     \node[anchor=west,inner sep=0pt,text width=0.85\paperwidth,align=flush left]
+       at ([xshift=1.1cm,yshift=1.15cm]current page.south west)
+       {{\color{white}\Large\bfseries #2}\par\vspace{4pt}
+        {\color{white!80!ugrInk}\small #3}};
+   \end{tikzpicture}
+   \end{frame}}%
+}
+
+% Cierre:  \ugrthanks{Gracias}{¿Preguntas?}{contacto, colaboradores}{logos}
+\newcommand{\ugrthanks}[4]{%
+  {\setbeamertemplate{footline}{}\setbeamertemplate{headline}{}%
+   \begin{frame}[plain]
+   \begin{tikzpicture}[remember picture,overlay]
+     % panel derecho: la misma imagen que la portada si se ha fijado \ugrcover;
+     % si no, el mosaico de siempre
+     \ifx\ugr@cover\@empty
+       \fill[ugrSand] ([xshift=-0.36\paperwidth]current page.north east)
+         rectangle (current page.south east);
+       \ugr@mosaic{([xshift=-0.36\paperwidth+0.9cm,yshift=-0.9cm]current page.north east)}{6}{9}{0.62cm}
+     \else
+       \node[anchor=north east,inner sep=0pt] at (current page.north east)
+         {\adjustbox{min width=0.36\paperwidth,min height=\paperheight,
+            max width=0.36\paperwidth,max height=\paperheight}{%
+            \includegraphics[width=0.36\paperwidth,height=\paperheight,keepaspectratio=false]{\ugr@cover}}};
+     \fi
+     \fill[rojoUGR] ([xshift=-0.36\paperwidth]current page.north east)
+       rectangle ++(4pt,-\paperheight);
+     \node[anchor=west,inner sep=0pt,text width=0.52\paperwidth,align=flush left]
+       at ([xshift=1.1cm]current page.west) {%
+       {\color{ugrInk}\fontsize{30}{34}\selectfont\bfseries #1\par}
+       \vspace{6pt}{\color{rojoUGR}\Large #2\par}
+       \vspace{14pt}{\color{rojoUGR}\rule{1.2cm}{3pt}}\par\vspace{12pt}
+       {\color{ugrText}\small #3\par}
+       \vspace{14pt}#4};
+   \end{tikzpicture}
+   \end{frame}}%
+}
+
+\endinput

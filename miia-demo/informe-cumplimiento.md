@@ -36,7 +36,7 @@
 | 6 | Ejemplos 01–06 con `docker compose run --rm lab python …` | ✅ Cumple | Los 6 ejemplos corren en el contenedor `lab` con las librerías ya instaladas; salida coherente con lo que describe `ejemplos/README.md` (ver §5). |
 | 7 | «Claves virtuales»: crear clave (UI o `POST /key/generate`) y usarla | ✅ Cumple | `POST /key/generate` → 200; la clave devuelta en el campo **`key`** (`sk-…`) funciona en una petición real → 200. (Ver §6.1 sobre el campo `token`.) |
 | 8 | «Perfil GPU (vLLM)» y «Ollama con GPU NVIDIA» | ⏸ No verificable aquí | Sin GPU NVIDIA en esta máquina. Las configuraciones **sí son válidas**: `docker compose --profile gpu config -q` y `docker compose -f docker-compose.yml -f docker-compose.ollama-gpu.yml config -q` → OK. |
-| 9 | «MCP con herramientas externas»: endpoint `http://localhost:8001/mcp` | ✅ Cumple (verificado desde dentro) | Handshake MCP `initialize` sobre `mcp:8000/mcp` → 200; tools/recursos/prompts descubiertos por el ejemplo 05. |
+| 9 | «MCP con herramientas externas»: endpoint `http://localhost:8001/mcp` | ✅ Cumple (verificado desde dentro) | Handshake MCP `initialize` sobre `mcp:8000/mcp` → 200; tools/recursos/prompts descubiertos por el ejemplo 06. |
 | 10 | «El modelo de la demo»: `qwen3.5:2b-q4_K_M` como `miia-demo`, `think: false`, `/no_think` | ✅ Cumple | `litellm/config.yaml` define `ollama_chat/qwen3.5:2b-q4_K_M` con `think: false` y `num_ctx: 8192`; los ejemplos añaden `/no_think` vía `no_think` de `config.json` (y `NO_THINK=0` lo desactiva, como documenta `ejemplos/README.md`). |
 | 11 | «Llevar el modelo sin red (aula)»: exportar el volumen con `tar czf` | ✅ Cumple | `docker run --rm -v miia-demo_ollama:/data -v …:/out alpine tar czf /out/modelo-ollama.tgz -C /data .` → archivo de 4,0 GB generado correctamente (incluye `qwen3.5:2b` y `qwen3:4b`). |
 | 12 | «Limpieza»: `docker compose down` / `down -v` | ⏸ No ejecutado | No se ejecuta durante la comprobación para no derribar la pila. Los comandos son estándar de Compose y la composición incluye los volúmenes `ollama`, `hf-cache`, `pgdata`, `webui`. |
@@ -74,11 +74,11 @@ Con la VPN conectada, el arranque de Open WebUI se estiró (~12 min, `unhealthy`
 | Script | Verificación del comprobador | Salida observada |
 |---|---|---|
 | `01_hola_api.py` | Mide TTFT y tokens/s | Llamada normal (51 entrada/60 salida tokens); streaming con **TTFT 0,13 s** y **16,5 tokens/s**. Lista `miia-demo` en la pasarela. |
-| `02_salida_estructurada.py` | Impone el esquema | JSON «por favor» **inválido** contra la clase Pydantic (campo `curso` mal nombrado, fechas no normalizadas) → muestra el problema; con `json_schema` → respuesta válida y legible (`horas: 40`, `aprovechamiento: true`). Justo el contraste pedagógico prometido. |
-| `03_tool_calling.py` | `Tu código devuelve: 18` + respuesta final | El modelo pide `ects_desde_horas({"horas": 450})`; el código devuelve `18.0`; respuesta final coherente. |
-| `04_agente_minimo.py` | Skill cargada + `informe.md` escrito (sandbox temporal) | 5 pasos: `cargar_skill(informe-incidencias)` → `listar_directorio(incidencias)` → 3× `leer_fichero` → `escribir_fichero(informe.md)`. El informe respeta la skill (tabla ordenada por prioridad, sección de acciones). |
-| `05_agente_mcp.py` | Tickets en MCP temporal + 3 llamadas MCP | Descubre las 4 tools, el recurso `ugr://master/especialidades` y el prompt `resumir_incidencia`; ejecuta `listar_asignaturas(iot)` → `crear_ticket(baja)` → `listar_tickets()` en el MCP de pruebas (sandbox temporal, sin tocar `workspace/`). |
-| `06_concurrencia.py` | 2 peticiones a la vez | 2 peticiones completadas (5,6 s y 7,4 s); **18,6 tokens/s agregados** — el encadenamiento esperado con `OLLAMA_NUM_PARALLEL=2` en CPU. |
+| `03_salida_estructurada.py` | Impone el esquema | JSON «por favor» **inválido** contra la clase Pydantic (campo `curso` mal nombrado, fechas no normalizadas) → muestra el problema; con `json_schema` → respuesta válida y legible (`horas: 40`, `aprovechamiento: true`). Justo el contraste pedagógico prometido. |
+| `04_tool_calling.py` | `Tu código devuelve: 18` + respuesta final | El modelo pide `ects_desde_horas({"horas": 450})`; el código devuelve `18.0`; respuesta final coherente. |
+| `05_agente_minimo.py` | Skill cargada + `informe.md` escrito (sandbox temporal) | 5 pasos: `cargar_skill(informe-incidencias)` → `listar_directorio(incidencias)` → 3× `leer_fichero` → `escribir_fichero(informe.md)`. El informe respeta la skill (tabla ordenada por prioridad, sección de acciones). |
+| `06_agente_mcp.py` | Tickets en MCP temporal + 3 llamadas MCP | Descubre las 4 tools, el recurso `ugr://master/especialidades` y el prompt `resumir_incidencia`; ejecuta `listar_asignaturas(iot)` → `crear_ticket(baja)` → `listar_tickets()` en el MCP de pruebas (sandbox temporal, sin tocar `workspace/`). |
+| `02_concurrencia.py` | 2 peticiones a la vez | 2 peticiones completadas (5,6 s y 7,4 s); **18,6 tokens/s agregados** — el encadenamiento esperado con `OLLAMA_NUM_PARALLEL=2` en CPU. |
 | `agent_core.py` | Importa `run_agent` | OK. |
 | `config.py` | `cargar_config()` válida | OK. |
 
@@ -86,7 +86,7 @@ El comprobador usó, como documenta, un sandbox y un servidor MCP temporales (`m
 
 ### 5.2. Pruebas unitarias (`tests/`) → **9/9 OK**
 
-Ejecutadas en el contenedor `lab` (el host no tiene `openai`): `python -m unittest discover -s tests` → `Ran 9 tests … OK` (1,7 s). Cubren `config.py` (clave por variable de entorno, validaciones, `NO_THINK`) y `04_agente_minimo.py` (sandbox, rutas seguras, skills).
+Ejecutadas en el contenedor `lab` (el host no tiene `openai`): `python -m unittest discover -s tests` → `Ran 9 tests … OK` (1,7 s). Cubren `config.py` (clave por variable de entorno, validaciones, `NO_THINK`) y `05_agente_minimo.py` (sandbox, rutas seguras, skills).
 
 ### 5.3. `ejemplos/README.md`
 

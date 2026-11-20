@@ -90,14 +90,14 @@ for script in "${scripts[@]}"; do
     args=()
     options=()
     case "$name" in
-        04_agente_minimo.py)
+        05_agente_minimo.py)
             options=(-v "$tmp/agent:/test-workspace" -e SANDBOX=/test-workspace)
             args=(--auto)
             ;;
-        05_agente_mcp.py)
+        06_agente_mcp.py)
             options=(-e "MCP_URL=http://$mcp_name:8000/mcp")
             ;;
-        06_concurrencia.py)
+        02_concurrencia.py)
             args=(2)
             ;;
     esac
@@ -119,14 +119,14 @@ for script in "${scripts[@]}"; do
             01_hola_api.py)
                 grep -q 'TTFT:' "$log" || ok=0
                 ;;
-            02_salida_estructurada.py)
+            03_salida_estructurada.py)
                 grep -q 'Imponiendo el esquema' "$log" || ok=0
                 ;;
-            03_tool_calling.py)
+            04_tool_calling.py)
                 grep -q 'Tu código devuelve: 18' "$log" && \
                     grep -q 'Respuesta final' "$log" || ok=0
                 ;;
-            04_agente_minimo.py)
+            05_agente_minimo.py)
                 if [[ ! -s "$tmp/agent/informe.md" ]]; then
                     echo "No se creó informe.md en el sandbox." >&2
                     ok=0
@@ -136,7 +136,7 @@ for script in "${scripts[@]}"; do
                     ok=0
                 fi
                 ;;
-            05_agente_mcp.py)
+            06_agente_mcp.py)
                 [[ -s "$tmp/mcp/tickets.jsonl" ]] && \
                     grep -q '\] → listar_asignaturas(' "$log" && \
                     grep -q '\] → crear_ticket(' "$log" && \
@@ -145,7 +145,7 @@ for script in "${scripts[@]}"; do
                         ok=0
                     }
                 ;;
-            06_concurrencia.py)
+            02_concurrencia.py)
                 grep -q 'petición  1 terminada' "$log" && \
                     grep -q 'petición  2 terminada' "$log" || ok=0
                 ;;

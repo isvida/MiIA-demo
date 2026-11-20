@@ -1,0 +1,227 @@
+%============================================================ BLOQUE 6 · Casos de uso (20 min)
+\ugrsection{06}{Casos de uso}{Inicio: 1:30 · 20 min\\Cinco servicios sobre un mismo endpoint}
+
+\ugrimageframe{imagenes/s06_diplomas.jpeg}{11.500 diplomas, un único formato}{De documentos heterogéneos a datos validados · Ilustración generada con IA}
+
+\begin{frame}{Cinco servicios, un solo endpoint}{Todos los clientes hablan la misma API compatible con OpenAI}
+	\centering\footnotesize
+	\setlength{\tabcolsep}{3pt}
+	\begin{tabular}{@{}R{1.9cm}R{3.2cm}R{4.8cm}R{2.3cm}@{}}
+		\toprule
+		\textbf{Servicio}                       & \textbf{Dónde}           & \textbf{Qué hace}                                              & \textbf{Acceso}   \\
+		\midrule
+		\textbf{\textcolor{rojoUGR}{MiIA Chat}} & Navegador (Open WebUI)   & Conversación, documentos, sandbox de Python, búsqueda web, voz & Keycloak (OAuth2) \\[3pt]
+		\textbf{ThunderAI}                      & Extensión de Thunderbird & Reescribir, resumir, traducir y clasificar correos             & Clave virtual     \\[3pt]
+		\textbf{Continue}                       & Extensión de VS Code     & Explicar, generar y refactorizar código                        & Clave virtual     \\[3pt]
+		\textbf{OpenCode}                       & Terminal                 & Agente de código (bloque 5)                                    & Clave virtual     \\[3pt]
+		\textbf{EPFReader}                      & Aplicación en Python     & Extracción masiva de datos                                     & Clave virtual     \\
+		\bottomrule
+	\end{tabular}
+	\keymsg{La gente conserva sus herramientas y gana un botón más.}
+\end{frame}
+
+\begin{frame}{Caso práctico: EPFReader}{Diplomas de formación para la Carrera Horizontal del PTGAS}
+	\begin{columns}[c]
+		\begin{column}{0.3\textwidth}
+			\bigstat{11.500+}{diplomas procesados.}
+		\end{column}
+		\begin{column}{0.66\textwidth}
+			\footnotesize
+			Campos: curso, entidad, fechas, horas, calificación.\\[4pt]
+			Un proceso manual aportó la referencia de contraste.
+		\end{column}
+	\end{columns}
+	\ugrsteps{PDF/{Diplomas de partida},
+	Imágenes/{pdf2image y OpenCV},
+	OCR/{Tesseract},
+	LLM/{Prompt + esquema Pydantic},
+	JSON/{Validado, uno por diploma}}
+	\keymsg{Con un modelo de visión el OCR sobra: el modelo lee la imagen directamente.}
+\end{frame}
+
+\begin{frame}{Qué lo hizo funcionar}{Dos técnicas del bloque 3, aplicadas a gran escala}
+	\begin{columns}[T]
+		\begin{column}{0.5\textwidth}
+			\themeblock{rojoUGR}{Salida estructurada}{%
+				Un modelo Pydantic estricto define cada campo, su tipo y sus restricciones.\\
+				La decodificación restringida fuerza un JSON conforme al esquema.\\
+				Sin texto libre ni campos inventados.}
+		\end{column}
+		\begin{column}{0.5\textwidth}
+			\themeblock{nA}{Visión en lugar de OCR}{%
+				Llama 3.2 Vision y Qwen2.5-VL leen la imagen directamente.\\
+				Mejoran con diseños heterogéneos: logotipos, sellos, firmas manuscritas, tipografías poco habituales.\\
+				Justo donde el OCR clásico falla más.}
+		\end{column}
+	\end{columns}
+	\keymsg{Documento no estructurado de entrada, registro validado de salida.}
+\end{frame}
+
+\begin{frame}{El patrón se generaliza}{Cualquier proceso que parta de documentos heterogéneos}
+	{\footnotesize\color{darkgray}Candidatos:}\hspace{6pt}
+	\appchip{Matrículas}\hspace{4pt}\appchip{Becas}\hspace{4pt}\appchip{Certificados}\hspace{4pt}\appchip{Facturas}\hspace{4pt}\appchip{Cuestionarios}
+	\vspace{0.3cm}
+	\ugrsteps{Esquema/{Define los campos},
+	Extraer/{OCR o visión},
+	Validar/{Reglas automáticas},
+	Excepciones/{Las revisa una persona},
+	Medir/{Con muestra etiquetada}}
+	\vspace{8pt}\demoline{03\_salida\_estructurada.py}
+	\keymsg{La receta no cambia: lo que cambia es el esquema.}
+\end{frame}
+
+\begin{frame}{Demo 03: ¿qué vamos a hacer?}{Una versión reducida del patrón de extracción de EPFReader}
+	\begin{columns}[T]
+		\begin{column}{0.31\textwidth}
+			\ugrcard[nA]{1}{Entrada}{Un diploma inventado en texto, con errores que simulan una salida OCR.}
+		\end{column}
+		\begin{column}{0.31\textwidth}
+			\ugrcard[nB]{2}{Proceso}{El modelo extrae los datos dos veces: sin esquema y con esquema.}
+		\end{column}
+		\begin{column}{0.31\textwidth}
+			\ugrcard[nE]{3}{Resultado}{Pydantic comprueba los datos recibidos y podemos comparar ambas respuestas.}
+		\end{column}
+	\end{columns}
+	{\footnotesize La demo no lee PDF ni ejecuta OCR: parte de un texto preparado.}
+\end{frame}
+
+\begin{frame}{Demo 03: comparar las dos peticiones}{El cliente comprueba ambas respuestas con el mismo modelo Pydantic}
+	\centering
+	\adjustbox{max width=\linewidth,max height=3.4cm}{%
+		\begin{tikzpicture}[every node/.append style={font=\footnotesize}]
+			\node[bbx, minimum width=3cm, minimum height=0.65cm] at (0,0) {\textbf{Programa cliente}};
+			\node[rbx, minimum width=3cm, minimum height=0.65cm] at (10.4,0) {\textbf{Servidor LLM}};
+			\draw[ar] (0,-0.9) -- (10.4,-0.9);
+			\node[anchor=south, inner sep=1pt] at (5.2,-0.86) {1. Texto del diploma + «responde solo con JSON»};
+			\draw[ar] (10.4,-1.65) -- (0,-1.65);
+			\node[anchor=south, inner sep=1pt] at (5.2,-1.61) {2. Primera respuesta: el cliente intenta validarla};
+			\draw[ar] (0,-2.4) -- (10.4,-2.4);
+			\node[anchor=south, inner sep=1pt] at (5.2,-2.36) {3. Mismo texto + esquema JSON en \texttt{response\_format}};
+			\draw[ar] (10.4,-3.15) -- (0,-3.15);
+			\node[anchor=south, inner sep=1pt] at (5.2,-3.11) {4. Segunda respuesta: el cliente la valida y muestra};
+		\end{tikzpicture}}
+	\par\vspace{2pt}
+	{\footnotesize Son dos peticiones independientes; la segunda no usa la respuesta de la primera.}
+	\keymsg{La segunda petición incluye el esquema; la primera no.}
+\end{frame}
+
+\begin{frame}[fragile]{Demo 03: preparar el texto y los campos}{El ejemplo recibe texto; el esquema define qué datos esperamos}
+	\begin{columns}[T]
+		\begin{column}{0.5\textwidth}
+			{\footnotesize\textbf{Fragmento del diploma inventado}:}
+			\begin{lstlisting}[language={}]
+CERT1FICA que D.ª María Ejemplo Prueba
+ha superado con aprovecha-
+miento el curso "Introducción a la
+Administración de Sistemas Linux"
+con una duración de 40 horas.
+\end{lstlisting}
+			{\footnotesize La entrada contiene errores y cortes de palabras.}
+		\end{column}
+		\begin{column}{0.48\textwidth}
+			{\footnotesize\textbf{Campos definidos en Pydantic}:}
+			\begin{lstlisting}
+class Diploma(BaseModel):
+    curso: str
+    entidad_emisora: str
+    alumno: str
+    fecha_inicio: Optional[str]
+    fecha_fin: Optional[str]
+    horas: Optional[int]
+    aprovechamiento: bool
+\end{lstlisting}
+			{\scriptsize Extracto sin las descripciones de los campos.}
+		\end{column}
+	\end{columns}
+	\keymsg{Pydantic define el formato esperado; el texto del diploma sigue siendo la fuente de los datos.}
+\end{frame}
+
+\begin{frame}[fragile]{Demo 03: primera petición, JSON sin esquema}{Pedimos un formato en el prompt y comprobamos la respuesta}
+	\begin{columns}[T]
+		\begin{column}{0.58\textwidth}
+			\begin{lstlisting}
+r = client.chat.completions.create(
+    model=MODEL, temperature=config.temperature,
+    messages=[{"role": "user", "content":
+        PROMPT + "\nResponde solo con JSON." + NT}],
+)
+bruto = r.choices[0].message.content
+try:
+    Diploma.model_validate_json(bruto)
+    print("Válido")
+except (ValidationError, ValueError):
+    print("NO válido")
+\end{lstlisting}
+		\end{column}
+		\begin{column}{0.4\textwidth}
+			\footnotesize
+			\begin{itemize}
+				\item El servidor recibe el texto y la instrucción, pero no el esquema de \texttt{Diploma}.
+				\item El modelo puede usar nombres distintos o devolver un formato incompatible.
+				\item El cliente imprime el resultado, intenta validarlo y continúa aunque falle la validación.
+			\end{itemize}
+		\end{column}
+	\end{columns}
+	{\scriptsize Extracto abreviado de \texttt{03\_salida\_estructurada.py}.}
+\end{frame}
+
+\begin{frame}[fragile]{Demo 03: segunda petición, con esquema}{El cliente envía al servidor el contrato generado por Pydantic}
+	\begin{columns}[T]
+		\begin{column}{0.59\textwidth}
+			\begin{lstlisting}
+r = client.chat.completions.create(
+    model=MODEL, temperature=config.temperature,
+    messages=[{"role": "user",
+               "content": PROMPT + NT}],
+    response_format={
+        "type": "json_schema",
+        "json_schema": {
+            "name": "Diploma",
+            "schema": Diploma.model_json_schema(),
+            "strict": True,
+        },
+    },
+)
+diploma = Diploma.model_validate_json(
+    r.choices[0].message.content)
+\end{lstlisting}
+		\end{column}
+		\begin{column}{0.39\textwidth}
+			\footnotesize
+			\begin{itemize}
+				\item \texttt{model\_json\_schema()} describe los campos y tipos esperados.
+				\item Si el motor lo admite, usa el esquema para restringir la generación.
+				\item El cliente valida otra vez. Si esta petición o su validación falla, el ejemplo termina con error.
+			\end{itemize}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Demo 03: ejecutar e interpretar el resultado}{Desde \texttt{miia-demo}, con los servicios y el modelo preparados}
+	\begin{lstlisting}[language={}]
+docker compose run --rm lab python ejemplos/03_salida_estructurada.py
+\end{lstlisting}
+	\begin{columns}[T]
+		\begin{column}{0.48\textwidth}
+			\themeblock{nA}{Primera respuesta}{%
+				Puede ser JSON válido y aun así no cumplir \texttt{Diploma}.\\
+				Por ejemplo, puede usar \texttt{duracion\_horas} en vez de \texttt{horas}.}
+		\end{column}
+		\begin{column}{0.48\textwidth}
+			\themeblock{nB}{Segunda respuesta}{%
+				Si se admite el esquema y pasa la validación, se muestra el objeto como JSON.\\
+				Los valores extraídos aún pueden ser incorrectos.}
+		\end{column}
+	\end{columns}
+	{\footnotesize Las fechas son cadenas: el ejemplo no comprueba que sean fechas reales ni que sigan \texttt{AAAA-MM-DD}.}
+\end{frame}
+
+\begin{frame}{Verifica antes de fiarte}{La evaluación forma parte del sistema, no es un añadido}
+	\begin{enumerate}
+		\item Construye primero una \textbf{muestra etiquetada}: es tu referencia.
+		\item Informa de la \textbf{precisión por campo}, no de un «parece correcto».
+		\item Deriva a personas las validaciones fallidas y los casos de baja confianza.
+		\item Repite la muestra al cambiar de modelo, de prompt o de motor.
+	\end{enumerate}
+	\keymsg{Un proceso rápido que falla en silencio es peor que uno lento que acierta.}
+\end{frame}

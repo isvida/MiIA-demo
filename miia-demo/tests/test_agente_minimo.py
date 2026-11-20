@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "ejemplos"))
-spec = importlib.util.spec_from_file_location("agente_minimo", ROOT / "ejemplos/04_agente_minimo.py")
+spec = importlib.util.spec_from_file_location("agente_minimo", ROOT / "ejemplos/05_agente_minimo.py")
 assert spec and spec.loader
 agent = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(agent)

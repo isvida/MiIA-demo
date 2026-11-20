@@ -15,7 +15,7 @@ no modifiques archivos ni ejecutes operaciones por el mero hecho de preguntar.
 Infraestructura LLM on-premise en miniatura, en Docker Compose y sin GPU:
 un único endpoint compatible con OpenAI (`miia-demo`) servido por Ollama (CPU),
 una pasarela LiteLLM con claves y consumo, un chat web, un servidor MCP de
-ejemplo y seis ejemplos Python progresivos (API → agentes → MCP → concurrencia).
+ejemplo y seis ejemplos Python progresivos (API → concurrencia → herramientas → agentes → MCP).
 
 | Dónde | Qué es |
 |---|---|
@@ -23,13 +23,13 @@ ejemplo y seis ejemplos Python progresivos (API → agentes → MCP → concurre
 | `docker-compose.ollama-gpu.yml` | Overlay opcional: GPU NVIDIA para Ollama (se suma con `-f`) |
 | `litellm/config.yaml` | `miia-demo` → `ollama_chat/qwen3.5:2b-q4_K_M`, `think: false`, `num_ctx: 8192`; master key `sk-demo-master` por defecto |
 | `litellm/config.gpu.yaml` | Perfil GPU: vLLM (`Qwen/Qwen3-4B`) principal + Ollama como fallback (`fallbacks`) |
-| `ejemplos/01…06_*.py` | API/streaming (TTFT, tokens/s), JSON con esquema, tool calling, agente local, agente MCP, concurrencia |
+| `ejemplos/01…06_*.py` | API/streaming (TTFT, tokens/s), concurrencia, JSON con esquema, tool calling, agente local, agente MCP |
 | `ejemplos/agent_core.py` | Bucle de agente compartido (`run_agent`, máx. 12 pasos; los errores de herramientas vuelven al modelo) |
 | `ejemplos/config.py` + `config.json` | Configuración compartida: `base_url`, clave (`${LITELLM_MASTER_KEY:-sk-demo-master}`), modelo, `temperature`, `no_think`; las variables `OPENAI_BASE_URL`/`OPENAI_API_KEY`/`MODEL`/`NO_THINK` tienen prioridad |
 | `mcp/server.py` | Servidor MCP Streamable HTTP (puerto 8000 interno, 8001 externo): 4 tools, 1 resource, 1 prompt; escribe tickets en `workspace/tickets.jsonl` |
 | `workspace/` | Datos de los agentes: `incidencias/` (3 incidentes) y `skills/informe-incidencias/SKILL.md` |
 | `test-scripts.sh` | Prueba de integración de todos los ejemplos; usa un sandbox y un MCP temporales; devuelve ≠0 si algo falla |
-| `tests/` | Pruebas unitarias (unittest) de `ejemplos/config.py` y `ejemplos/04_agente_minimo.py` |
+| `tests/` | Pruebas unitarias (unittest) de `ejemplos/config.py` y `ejemplos/05_agente_minimo.py` |
 | `lab/Dockerfile`, `mcp/Dockerfile` | Imágenes: Python 3.12 con `openai`, `pydantic`, `mcp`, `httpx` (lab) y `mcp` (servidor) |
 
 Flujo de una petición: ejemplo (contenedor `lab`) → `litellm:4000/v1` → Ollama.
@@ -44,7 +44,7 @@ docker compose logs -f <servicio>            # logs (litellm, ollama, mcp, open-
 docker compose up -d                         # arrancar
 docker compose down                          # parar y eliminar contenedores (conserva imágenes y volúmenes)
 docker compose run --rm lab python ejemplos/01_hola_api.py      # un ejemplo
-docker compose run --rm lab python ejemplos/04_agente_minimo.py --auto  # agente sin confirmación
+docker compose run --rm lab python ejemplos/05_agente_minimo.py --auto  # agente sin confirmación
 bash test-scripts.sh                         # probar todos los ejemplos (TEST_TIMEOUT para el límite)
 docker compose run --rm -T --no-deps -v "$PWD/tests:/app/tests:ro" lab \
     python -m unittest discover -s tests -v  # pruebas unitarias (el host no tiene las librerías)
@@ -99,7 +99,7 @@ docker compose exec ollama ollama list       # modelos descargados
    `tests/`. Para cambios solo de documentación, revisa enlaces y bloques
    pertinentes sin arrancar servicios innecesariamente.
 4. No detengas ni alteres contenedores ajenos, ni borres volúmenes o datos sin
-   autorización. El ejemplo 04 puede escribir en `workspace/` y el 05 puede
+   autorización. El ejemplo 05 puede escribir en `workspace/` y el 06 puede
    crear tickets; evita ejecutarlos directamente contra datos reales sin permiso.
    No envíes código, datos del proyecto o credenciales a servicios externos sin
    autorización; revisa el proveedor del modelo y las herramientas usadas.

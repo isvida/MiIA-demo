@@ -1,4 +1,4 @@
-"""02 · Salida estructurada: del texto libre a datos validados (patrón EPFReader).
+"""03 · Salida estructurada: del texto libre a datos validados (patrón EPFReader).
 
 Un "diploma" con ruido de OCR (inventado) se convierte en un objeto Pydantic.
 Primero pedimos JSON "por favor"; después lo imponemos con un esquema.

@@ -1,0 +1,528 @@
+%============================================================ BLOQUE 3 · Hablar con un LLM (15 min)
+\ugrsection{03}{Hablar con un LLM}{Inicio: 0:30 · 15 min\\API, salida estructurada, herramientas y RAG}
+
+\begin{frame}[fragile]{La API compatible con OpenAI}{El estándar de facto: un mismo cliente para vLLM, Ollama, LiteLLM y la nube}
+	\begin{columns}[T]
+		\begin{column}{0.58\textwidth}
+			\begin{lstlisting}
+from openai import OpenAI
+client = OpenAI(base_url="http://localhost:4000/v1",
+                api_key="sk-...")
+r = client.chat.completions.create(
+    model="miia-demo",
+    messages=[
+        {"role": "system", "content": "Responde breve."},
+        {"role": "user", "content": "¿Qué es la caché KV?"},
+    ],
+    temperature=0.2, stream=True)
+\end{lstlisting}
+		\end{column}
+		\begin{column}{0.38\textwidth}
+			\footnotesize
+			\begin{itemize}
+				\item El SDK envía peticiones \textbf{REST sobre HTTP}, normalmente con JSON.
+				\item Cambiar de backend = cambiar \texttt{base\_url} y \texttt{model}.
+				\item Roles: \texttt{system}, \texttt{user}, \texttt{assistant}, \texttt{tool}.
+				\item Parámetros clave: \texttt{temperature}, \texttt{max\_tokens}, \texttt{stream}.
+			\end{itemize}
+		\end{column}
+	\end{columns}
+	\keymsg{Estandariza la API, no el modelo.}
+\end{frame}
+
+\begin{frame}{La API habla HTTP}{REST: el cliente envía una petición a una URL y recibe una respuesta}
+	\begin{center}
+		\adjustbox{max width=\linewidth}{%
+			\begin{tikzpicture}
+				\node[bbx, minimum width=2.4cm, minimum height=1.2cm] (client) at (0,0) {\textbf{Cliente}\\aplicación o SDK};
+				\node[rbx, minimum width=2.4cm, minimum height=1.2cm] (server) at (10.4,0) {\textbf{Servidor}\\API del LLM};
+				\draw[ar] (1.4,0.45) -- (9,0.45);
+				\node[font=\footnotesize\bfseries, text=ugrInk, anchor=south] at (5.2,0.48)
+					{\texttt{POST /v1/chat/completions}};
+				\node[font=\scriptsize, text=darkgray, anchor=north] at (5.2,0.42)
+					{JSON: modelo, mensajes y opciones};
+				\draw[ar] (9,-0.75) -- (1.4,-0.75);
+				\node[font=\footnotesize\bfseries, text=ugrInk, anchor=south] at (5.2,-0.72)
+					{HTTP 200 + JSON (sin \emph{streaming})};
+			\end{tikzpicture}}
+	\end{center}
+	\begin{itemize}
+		\footnotesize
+		\item \textbf{HTTP}: protocolo de petición y respuesta; la URL identifica el recurso.
+		\item \textbf{JSON}: formato de los datos. El código HTTP indica éxito o error.
+		\item Con \texttt{stream=True}, la respuesta llega por partes mediante eventos SSE sobre HTTP.
+	\end{itemize}
+	\keymsg{La librería facilita el trabajo, pero por debajo envía peticiones HTTP a la API.}
+\end{frame}
+
+\begin{frame}{Streaming: del POST a los eventos SSE}{La respuesta llega por fragmentos, sin abrir otro protocolo}
+	{\centering
+		\adjustbox{max width=\linewidth}{%
+			\begin{tikzpicture}[every node/.append style={font=\footnotesize}]
+				\node[bbx, minimum width=2cm, minimum height=0.55cm] at (0,0.5) {\textbf{Cliente}};
+				\node[rbx, minimum width=2cm, minimum height=0.55cm] at (10.4,0.5) {\textbf{Servidor}};
+				\draw[ar] (0,-0.1) -- (10.4,-0.1);
+				\node[anchor=south] at (5.2,-0.08)
+					{\texttt{POST /v1/chat/completions} + \texttt{"stream": true}};
+				\draw[ar] (10.4,-0.75) -- (0,-0.75);
+				\node[anchor=south] at (5.2,-0.73)
+					{\texttt{Content-Type: text/event-stream}};
+				\draw[ar] (10.4,-1.4) -- (0,-1.4);
+				\node[anchor=south] at (5.2,-1.38)
+					{\texttt{data: \{...\}} \quad \texttt{data: \{...\}} \quad \ldots\ fragmentos JSON};
+				\draw[ar] (10.4,-2.05) -- (0,-2.05);
+				\node[anchor=south] at (5.2,-2.03)
+					{\texttt{data: [DONE]} \quad fin en Chat Completions};
+			\end{tikzpicture}}\par}
+	{\scriptsize En \texttt{/v1/responses} también se usa SSE; al completar, el evento es \texttt{response.completed}.}
+	\vspace{3pt}
+	\begin{columns}[T]
+		\begin{column}{0.49\textwidth}
+			\footnotesize \textbf{\textcolor{nA}{SSE sobre HTTP}}\\
+			Unidireccional: el servidor envía la respuesta al cliente.
+		\end{column}
+		\begin{column}{0.49\textwidth}
+			\footnotesize \textbf{\textcolor{rojoUGR}{WebSockets}}\\
+			Bidireccional: útil para Realtime API y voz con interrupciones.
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Un chat es una lista de mensajes que crece}{El modelo no tiene memoria: reenvías el historial en cada llamada}
+	\begin{columns}[T]
+		\begin{column}{0.56\textwidth}
+			\centering
+			\adjustbox{max width=\linewidth}{%
+				\begin{tikzpicture}
+					\tikzset{m/.style={minimum width=0.8cm, minimum height=0.5cm, inner sep=0pt, font=\tiny, text=white, rounded corners=1.5pt}}
+					\node[lab, anchor=east] at (-0.2,2.1) {llamada 1};
+					\node[m, fill=darkgray, anchor=west] at (0,2.1) {S};
+					\node[m, fill=nA, anchor=west] at (0.85,2.1) {U};
+					\node[lab, anchor=west] at (1.8,2.1) {$\rightarrow$ A};
+					\node[lab, anchor=east] at (-0.2,1.3) {llamada 2};
+					\node[m, fill=darkgray, anchor=west] at (0,1.3) {S};
+					\node[m, fill=nA, anchor=west] at (0.85,1.3) {U};
+					\node[m, fill=nB, anchor=west] at (1.7,1.3) {A};
+					\node[m, fill=nA, anchor=west] at (2.55,1.3) {U};
+					\node[lab, anchor=west] at (3.5,1.3) {$\rightarrow$ A};
+					\node[lab, anchor=east] at (-0.2,0.5) {llamada 3};
+					\foreach \i/\c/\t in {0/darkgray/S,1/nA/U,2/nB/A,3/nA/U,4/nB/A,5/nA/U}
+					\node[m, fill=\c, anchor=west] at ({\i*0.85},0.5) {\t};
+					\node[lab, anchor=west] at (5.3,0.5) {$\rightarrow$ A};
+					\draw[rojoUGR, dashed, line width=0.9pt] (6.5,-0.1) -- (6.5,2.5);
+					\node[lab, text=rojoUGR, anchor=south] at (6.5,2.5) {ventana de contexto};
+					\node[lab, anchor=north west] at (0,-0.15) {S = sistema \quad U = usuario \quad A = asistente};
+				\end{tikzpicture}}
+		\end{column}
+		\begin{column}{0.4\textwidth}
+			\small
+			\begin{itemize}
+				\item El coste y la latencia crecen con el historial.
+				\item Ventana llena: recortar, resumir o recuperar.
+				\item El \textbf{prompt de sistema} guarda las instrucciones persistentes.
+				\item \texttt{temperature} baja (0--0,2) para extraer datos.
+			\end{itemize}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Salida estructurada: del texto a los datos}{Restringe el decodificador y después valida}
+	\begin{columns}[T]
+		\begin{column}{0.56\textwidth}
+			\begin{lstlisting}
+class Diploma(BaseModel):
+    curso: str
+    horas: Optional[int]
+    aprovechamiento: bool
+r = client.chat.completions.create(
+    model=MODEL, messages=msgs,
+    response_format={"type": "json_schema",
+      "json_schema": {"name": "Diploma", "strict": True,
+        "schema": Diploma.model_json_schema()}})
+Diploma.model_validate_json(
+    r.choices[0].message.content)
+\end{lstlisting}
+		\end{column}
+		\begin{column}{0.42\textwidth}
+			\footnotesize
+			\begin{itemize}
+				\item «Responde en JSON» no garantiza que la respuesta cumpla el esquema.
+				\item Si el motor lo admite, la \textbf{decodificación restringida} limita los tokens según el esquema.
+				\item En vLLM: \texttt{structured\_outputs}.
+				\item Sintaxis válida $\neq$ valores correctos.
+			\end{itemize}
+		\end{column}
+	\end{columns}
+	\demoline{03\_salida\_estructurada.py}
+	\keymsg{Valida siempre la respuesta: un formato correcto no garantiza datos correctos.}
+\end{frame}
+
+\begin{frame}{Demo 03: ¿qué vamos a hacer?}{Extraer datos de un diploma y comprobar su formato}
+	\begin{columns}[T]
+		\begin{column}{0.31\textwidth}
+			\ugrcard[nA]{1}{Entrada}{Un diploma inventado, en texto con errores simulados de OCR.}
+		\end{column}
+		\begin{column}{0.31\textwidth}
+			\ugrcard[nB]{2}{Proceso}{Pedimos JSON dos veces: primero sin esquema y después con un esquema.}
+		\end{column}
+		\begin{column}{0.31\textwidth}
+			\ugrcard[nE]{3}{Resultado}{Comparamos las respuestas y validamos sus campos y tipos con Pydantic.}
+		\end{column}
+	\end{columns}
+	{\footnotesize Un formato válido no garantiza que los datos sean correctos.}
+\end{frame}
+
+\begin{frame}[fragile]{Demo 03: del OCR al esquema}{Un diploma inventado y un contrato para sus datos}
+	\begin{columns}[T]
+		\begin{column}{0.52\textwidth}
+			{\scriptsize\textbf{Texto de entrada} (extracto del OCR):}
+			\begin{lstlisting}[language={}]
+CERT1FICA que D.ª María Ejemplo Prueba
+ha superado con aprovecha-
+miento el curso "Introducción a la
+Administración de Sistemas Linux"
+impartido del 3 al 28 de marzo de 2014,
+con una duración de 40 horas.
+\end{lstlisting}
+			{\footnotesize El texto contiene errores y cortes de línea típicos de OCR.}
+		\end{column}
+		\begin{column}{0.46\textwidth}
+			{\scriptsize\textbf{Contrato Pydantic} (sin descripciones):}
+			\begin{lstlisting}
+class Diploma(BaseModel):
+    curso: str
+    entidad_emisora: str
+    alumno: str
+    fecha_inicio: Optional[str]
+    fecha_fin: Optional[str]
+    horas: Optional[int]
+    aprovechamiento: bool
+\end{lstlisting}
+			{\footnotesize Los campos \texttt{Optional} admiten \texttt{null}, pero deben aparecer.}
+		\end{column}
+	\end{columns}
+	\keymsg{Las fechas son cadenas: pedir \texttt{AAAA-MM-DD} en la descripción no valida por sí solo ese formato.}
+\end{frame}
+
+\begin{frame}[fragile]{Demo 03: pedir JSON sin restricciones}{Primera petición: una instrucción en lenguaje natural}
+	\begin{columns}[T]
+		\begin{column}{0.58\textwidth}
+			\begin{lstlisting}
+r = client.chat.completions.create(
+    model=MODEL, temperature=config.temperature,
+    messages=[{"role": "user", "content":
+        PROMPT + "\nResponde solo con JSON." + NT}],
+)
+bruto = r.choices[0].message.content
+try:
+    Diploma.model_validate_json(bruto)
+    print("Válido")
+except (ValidationError, ValueError) as e:
+    print(f"NO válido: {type(e).__name__}")
+\end{lstlisting}
+		\end{column}
+		\begin{column}{0.4\textwidth}
+			\footnotesize
+			\begin{itemize}
+				\item Se envía el texto OCR y se \textbf{pide} JSON; no se envía el esquema.
+				\item Pydantic valida el JSON, los campos y los tipos; puede convertir valores.
+				\item El código muestra si la respuesta es válida y continúa aunque falle.
+			\end{itemize}
+		\end{column}
+	\end{columns}
+	{\scriptsize Fragmento adaptado: se han abreviado los mensajes impresos.}
+\end{frame}
+
+\begin{frame}[fragile]{Demo 03: solicitar y validar el esquema}{Segunda petición: el contrato viaja con la solicitud}
+	\begin{columns}[T]
+		\begin{column}{0.6\textwidth}
+			\begin{lstlisting}
+r = client.chat.completions.create(
+    model=MODEL, temperature=config.temperature,
+    messages=[{"role": "user", "content": PROMPT + NT}],
+    response_format={
+        "type": "json_schema",
+        "json_schema": {
+            "name": "Diploma",
+            "schema": Diploma.model_json_schema(),
+            "strict": True,
+        },
+    },
+)
+diploma = Diploma.model_validate_json(
+    r.choices[0].message.content)
+print(json.dumps(diploma.model_dump(),
+                 ensure_ascii=False, indent=2))
+\end{lstlisting}
+		\end{column}
+		\begin{column}{0.38\textwidth}
+			\footnotesize
+			\begin{itemize}
+				\item Pydantic genera el \textbf{JSON Schema} desde \texttt{Diploma}.
+				\item \texttt{response\_format} solicita al motor que lo respete.
+				\item La aplicación valida de nuevo y muestra el objeto como JSON.
+				\item Si el formato falla o no se admite, la segunda petición puede dar error.
+			\end{itemize}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Demo 03: ejecutar e interpretar el resultado}{Desde \texttt{miia-demo}, con los servicios y el modelo preparados}
+	\begin{lstlisting}[language={}]
+docker compose run --rm lab python ejemplos/03_salida_estructurada.py
+\end{lstlisting}
+	\vspace{-3pt}
+	{\scriptsize\textbf{Salida real de una ejecución local} (extractos):}
+	\begin{columns}[T]
+		\begin{column}{0.48\textwidth}
+			{\footnotesize\textbf{1. Sin restricciones}}
+			\begin{lstlisting}[language={}]
+{
+  "titulo": "CERTIFICADO",
+  "duracion_horas": "40 horas",
+  ...
+}
+→ NO válido: ValidationError
+\end{lstlisting}
+			{\footnotesize JSON válido, pero faltan campos del contrato y los nombres no coinciden.}
+		\end{column}
+		\begin{column}{0.5\textwidth}
+			{\footnotesize\textbf{2. Con esquema solicitado}}
+			\begin{lstlisting}[language={}]
+{
+  "fecha_inicio": "3 de marzo",
+  "fecha_fin": "28 de marzo",
+  "horas": 40,
+  "aprovechamiento": true,
+  ...
+}
+\end{lstlisting}
+			{\footnotesize Pasa Pydantic, pero las fechas no siguen el formato deseado: son cadenas válidas.}
+		\end{column}
+	\end{columns}
+	\keymsg{Un formato válido no garantiza que los datos sean correctos.}
+\end{frame}
+
+\ugrstatement{El modelo nunca ejecuta nada: solo pide que tu código lo haga.}{Llamada a herramientas (\emph{tool calling}): la base de los agentes, de MCP y de las skills}
+
+\begin{frame}{Demo 04: ¿qué vamos a hacer?}{Convertir horas de trabajo en créditos ECTS mediante una herramienta}
+	\begin{columns}[T]
+		\begin{column}{0.31\textwidth}
+			\ugrcard[nA]{1}{Entrada}{Preguntamos cuántos ECTS equivalen a 450 horas.}
+		\end{column}
+		\begin{column}{0.31\textwidth}
+			\ugrcard[nB]{2}{Proceso}{El modelo puede pedir una función; el programa la ejecuta y devuelve el resultado.}
+		\end{column}
+		\begin{column}{0.31\textwidth}
+			\ugrcard[nE]{3}{Resultado}{La función calcula 18 ECTS usando 25 horas por crédito; el modelo puede redactar la respuesta.}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Llamada a herramientas, paso a paso}{La lista de herramientas viaja con la petición como JSON Schema}
+	{\centering
+		\adjustbox{max width=\linewidth}{%
+			\begin{tikzpicture}[every node/.append style={font=\footnotesize}]
+				\node[bbx, minimum width=2.8cm, minimum height=0.6cm] at (0,0.5) {\textbf{Tu aplicación}};
+				\node[rbx, minimum width=2.8cm, minimum height=0.6cm] at (10.4,0.5) {\textbf{Servidor + modelo}};
+				\draw[ar] (0,-0.1) -- (10.4,-0.1);
+				\node[anchor=south] at (5.2,-0.08) {1. Pregunta: 450 horas $\rightarrow$ ECTS + herramientas};
+				\draw[ar] (10.4,-0.75) -- (0,-0.75);
+				\node[anchor=south] at (5.2,-0.73) {2. Solicitud: \texttt{ects\_desde\_horas(450)}};
+				\node[gbx, minimum height=0.55cm] at (1.7,-1.45)
+					{3. Tu código ejecuta la función: \textbf{18.0}};
+				\draw[ar] (0,-2.15) -- (10.4,-2.15);
+				\node[anchor=south] at (5.2,-2.13) {4. Envía el resultado de la herramienta: \texttt{18.0}};
+				\draw[ar] (10.4,-2.8) -- (0,-2.8);
+				\node[anchor=south] at (5.2,-2.78) {5. El modelo genera la respuesta final};
+			\end{tikzpicture}}\par}
+	\demoline{04\_tool\_calling.py}
+	\keymsg{En esta demo, el modelo solicita; \textbf{tu aplicación ejecuta} la función.}
+\end{frame}
+
+\begin{frame}[fragile]{Demo 04: definir la herramienta}{Una función local y una descripción para el modelo}
+	\begin{columns}[T]
+		\begin{column}{0.58\textwidth}
+			\begin{lstlisting}
+def ects_desde_horas(horas: float) -> float:
+    return round(horas / 25, 2)
+
+TOOLS = [{
+    "type": "function",
+    "function": {
+        "name": "ects_desde_horas",
+        "description": "Convierte horas a ECTS",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "horas": {"type": "number"}},
+            "required": ["horas"],
+        },
+    },
+}]
+\end{lstlisting}
+		\end{column}
+		\begin{column}{0.4\textwidth}
+			\footnotesize
+			\begin{itemize}
+				\item La función Python realiza la conversión: $450 / 25 = 18{,}0$.
+				\item \texttt{TOOLS} describe nombre y finalidad; los parámetros usan JSON Schema.
+				\item Se envía la \textbf{descripción}, no el código de la función.
+				\item El criterio de 25 horas por ECTS es el usado en esta demo.
+			\end{itemize}
+		\end{column}
+	\end{columns}
+	{\scriptsize Fragmento simplificado: se han abreviado las descripciones del esquema.}
+\end{frame}
+
+\begin{frame}[fragile]{Demo 04: pedir una herramienta}{Primera llamada: la pregunta y las herramientas disponibles}
+	\begin{columns}[T]
+		\begin{column}{0.58\textwidth}
+			\begin{lstlisting}
+messages = [{"role": "user", "content":
+    "¿Cuántos ECTS son 450 horas de trabajo?" + NT}]
+r = client.chat.completions.create(
+    model=MODEL, messages=messages,
+    tools=TOOLS, temperature=config.temperature)
+msg = r.choices[0].message
+
+if not msg.tool_calls:
+    print("El modelo respondió sin usar la herramienta:\n",
+          msg.content)
+    raise SystemExit
+
+for c in msg.tool_calls:
+    print(f"  {c.function.name}({c.function.arguments})")
+\end{lstlisting}
+		\end{column}
+		\begin{column}{0.4\textwidth}
+			\footnotesize
+			\begin{itemize}
+				\item El modelo recibe la pregunta y \texttt{tools=TOOLS}.
+				\item Puede responder directamente o proponer una llamada en \texttt{tool\_calls}.
+				\item Si no propone ninguna, el ejemplo muestra la respuesta y termina.
+				\item Una solicitud contiene nombre, argumentos JSON e identificador.
+			\end{itemize}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Demo 04: conservar la solicitud}{La llamada del asistente también forma parte de la conversación}
+	\begin{columns}[T]
+		\begin{column}{0.61\textwidth}
+			\begin{lstlisting}
+messages.append({
+    "role": "assistant",
+    "content": msg.content or "",
+    "tool_calls": [
+        {"id": c.id, "type": "function",
+         "function": {
+             "name": c.function.name,
+             "arguments": c.function.arguments}}
+        for c in msg.tool_calls
+    ],
+})
+\end{lstlisting}
+		\end{column}
+		\begin{column}{0.37\textwidth}
+			\footnotesize
+			\begin{itemize}
+				\item La aplicación añade al historial la solicitud del asistente.
+				\item Guarda el nombre, los argumentos y el \texttt{id} de cada llamada.
+				\item Ese \texttt{id} permitirá asociar cada resultado con su solicitud.
+			\end{itemize}
+		\end{column}
+	\end{columns}
+	\keymsg{El modelo propone la llamada; todavía no ha ejecutado la función.}
+\end{frame}
+
+\begin{frame}[fragile]{Demo 04: ejecutar y devolver el resultado}{La aplicación llama a Python y después consulta otra vez al modelo}
+	\begin{columns}[T]
+		\begin{column}{0.61\textwidth}
+			\begin{lstlisting}
+for c in msg.tool_calls:
+    args = json.loads(c.function.arguments)
+    resultado = ects_desde_horas(**args)
+    messages.append({
+        "role": "tool",
+        "tool_call_id": c.id,
+        "content": str(resultado)})
+
+r = client.chat.completions.create(
+    model=MODEL, messages=messages,
+    tools=TOOLS, temperature=config.temperature)
+print(r.choices[0].message.content)
+\end{lstlisting}
+		\end{column}
+		\begin{column}{0.37\textwidth}
+			\footnotesize
+			\begin{itemize}
+				\item \texttt{json.loads} convierte los argumentos en un diccionario.
+				\item El código ejecuta la función y añade el resultado con rol \texttt{tool} y el mismo \texttt{id}.
+				\item La segunda llamada envía el historial; el modelo puede responder. La demo no repite el bucle.
+			\end{itemize}
+		\end{column}
+	\end{columns}
+	{\scriptsize Extracto: se ha omitido la impresión intermedia del resultado.}
+\end{frame}
+
+\begin{frame}[fragile]{Demo 04: ejecutar y leer el resultado}{Desde \texttt{miia-demo}, con los servicios y el modelo preparados}
+	\begin{lstlisting}[language={}]
+docker compose run --rm lab python ejemplos/04_tool_calling.py
+\end{lstlisting}
+	{\footnotesize\textbf{Salida real de una ejecución local} (cabeceras simplificadas):}
+	\begin{lstlisting}[language={}]
+El modelo pide ejecutar:
+  ects_desde_horas({"horas": 450})
+Tu código devuelve: 18.0
+Respuesta final:
+450 horas de trabajo equivalen a **18.0 ECTS**.
+\end{lstlisting}
+	\begin{itemize}
+		\footnotesize
+		\item La petición es una propuesta; \texttt{18.0} procede de la función local.
+		\item El modelo recibe ese resultado y genera la frase final; la respuesta puede variar.
+	\end{itemize}
+	\keymsg{En producción, comprueba los argumentos y permisos antes de ejecutar herramientas.}
+\end{frame}
+
+\begin{frame}{Embeddings y RAG}{Primero buscar, después preguntar}
+	{\scriptsize\bfseries\color{rojoUGR} ANTES: INDEXAR LOS DOCUMENTOS}\par\vspace{-4pt}
+	\ugrsteps{Documentos/{Los textos de partida},
+	Fragmentos/{Se trocean},
+	Embeddings/{Un vector por trozo},
+	Índice/{Base vectorial}}
+	{\scriptsize\bfseries\color{rojoUGR} AL PREGUNTAR}\par\vspace{-4pt}
+	\ugrsteps{Pregunta/{La del usuario},
+	Embedding/{Su vector},
+	Búsqueda/{Top-$k$ trozos},
+	Prompt/{Con los trozos},
+	Respuesta/{La redacta el LLM}}
+	\keymsg{El modelo solo sabe lo que recuperas: la búsqueda decide el resultado.}
+\end{frame}
+
+\begin{frame}{Frameworks: qué abstraen y qué cuestan}{LangChain, LangGraph, LlamaIndex, Haystack, Pydantic AI\ldots}
+	\begin{columns}[T]
+		\begin{column}{0.31\textwidth}
+			\ugrcard{1}{Qué hay}{LangChain, LlamaIndex, Haystack y Pydantic AI.}
+		\end{column}
+		\begin{column}{0.31\textwidth}
+			\ugrcard[nB]{2}{Cuándo compensan}{Estado, RAG multi-fuente, trazas y evaluación.}
+		\end{column}
+		\begin{column}{0.31\textwidth}
+			\ugrcard[nE]{3}{Qué cuestan}{Una capa más, prompts ocultos, APIs cambiantes.}
+		\end{column}
+	\end{columns}
+	\keymsg{Aprende primero la API en bruto: los frameworks solo cambian la URL base.}
+\end{frame}
+
+\begin{frame}{Práctica: salida estructurada y herramientas}{Demo del bloque 3}
+	\detailbox{nB}{Ejecuta}{\texttt{... python ejemplos/03\_salida\_estructurada.py}\\
+		\texttt{... python ejemplos/04\_tool\_calling.py}}
+	\begin{itemize}
+		\small
+		\item \texttt{03}: texto de OCR ruidoso de un diploma inventado; compara «responde en JSON» con un esquema impuesto.
+		\item \texttt{04}: imprime los mensajes en bruto para ver el ciclo petición $\rightarrow$ ejecución $\rightarrow$ respuesta.
+		\item Intenta romperlo: quita un campo del esquema o cambia la temperatura.
+	\end{itemize}
+\end{frame}

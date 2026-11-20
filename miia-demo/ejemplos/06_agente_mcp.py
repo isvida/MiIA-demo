@@ -1,9 +1,9 @@
-"""05 · El mismo agente, pero las herramientas se DESCUBREN por MCP.
+"""06 · El mismo agente, pero las herramientas se DESCUBREN por MCP.
 
-    python ejemplos/05_agente_mcp.py
-    python ejemplos/05_agente_mcp.py "tu tarea..."
+    python ejemplos/06_agente_mcp.py
+    python ejemplos/06_agente_mcp.py "tu tarea..."
 
-Compara con 04: el bucle (agent_core.py) no cambia. Solo cambia de dónde salen las
+Compara con 05: el bucle (agent_core.py) no cambia. Solo cambia de dónde salen las
 herramientas: en vez de definirlas a mano, se las pedimos al servidor MCP.
 """
 import asyncio

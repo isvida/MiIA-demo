@@ -1,0 +1,58 @@
+%============================================================ BLOQUE 1 · Por qué (10 min)
+\ugrsection{01}{¿Por qué tener tu propio LLM?}{Inicio: 0:00 · 10 min\\Soberanía, control y coste}
+
+\ugrimageframe{imagenes/s01_infraestructura.jpeg}{El LLM, nueva infraestructura básica}{Como el correo, las bases de datos o el almacenamiento · Ilustración generada con IA}
+
+\begin{frame}{Infraestructura, no experimento}{Como antes el correo electrónico, las bases de datos o los escritorios virtuales}
+	\begin{columns}[T]
+		\begin{column}{0.5\textwidth}
+			\begin{itemize}
+				\item Casi todo software institucional llevará, o necesitará, un modelo de lenguaje.
+				\item Quien tardó en tener su propio correo o almacenamiento acabó dependiendo de terceros.
+				\item La pregunta no es \emph{si} usarás IA, sino \hlugr{quién custodia los datos}.
+			\end{itemize}
+		\end{column}
+		\begin{column}{0.46\textwidth}
+			\ugrfact[Operadores, no espectadores]{Entender la tecnología, desplegarla y gobernarla como cualquier otro servicio.}
+		\end{column}
+	\end{columns}
+	\keymsg{Un servicio LLM es infraestructura: hay que operarlo, protegerlo y escalarlo.}
+\end{frame}
+
+\begin{frame}{La soberanía es una decisión institucional}{Qué cambia cuando el modelo se ejecuta dentro del perímetro}
+	\ugrcompare{Servicio comercial alojado}{%
+		Cada consulta sale de la institución.\\
+		Las reglas las fija el proveedor.\\
+		El coste crece con el uso.\\
+		Acceso a los modelos más capaces.}
+	{Infraestructura propia}{%
+		Los datos no salen del perímetro (RGPD, ENS).\\
+		Cada institución define su política.\\
+		Coste $\approx$ amortización + operación.\\
+		Modelos abiertos, algo por detrás.}
+	\keymsg{No es solo una decisión técnica: es decidir quién custodia la información.}
+\end{frame}
+
+\begin{frame}{El caso que seguiremos: MiIA}{Un servicio institucional de IA generativa, construido y operado en casa}
+	\begin{columns}[c]
+		\begin{column}{0.58\textwidth}
+			\centering
+			\adjustbox{max width=\linewidth, max height=3.9cm}{%
+				\begin{tikzpicture}[every node/.append style={font=\footnotesize}]
+					\node[rbx, minimum width=3.3cm, minimum height=1.6cm] (core) at (0,0)
+					{\textbf{Núcleo MiIA}\\[2pt] NGINX $\rightarrow$ LiteLLM\\ $\rightarrow$ vLLM \,(Qwen)\\ {\scriptsize Docker}};
+					\node[bx] (chat) at (-2.9,1.9)  {MiIA Chat\\ {\scriptsize Open WebUI}};
+					\node[bx] (mail) at (2.9,1.9)   {ThunderAI\\ {\scriptsize Thunderbird}};
+					\node[bx] (code) at (-3.5,-0.1) {Continue\\ {\scriptsize VS Code}};
+					\node[bx] (oc)   at (3.5,-0.1)  {OpenCode\\ {\scriptsize terminal}};
+					\node[bx] (epf)  at (0,-2.2)    {EPFReader\\ {\scriptsize documentos}};
+					\foreach \n in {chat,mail,code,oc,epf} \draw[bar] (\n) -- (core);
+				\end{tikzpicture}}
+		\end{column}
+		\begin{column}{0.36\textwidth}
+			\bigstat{5}{del navegador al terminal.}\\[4pt]
+			\bigstat[ugrInk]{1}{un solo endpoint OpenAI.}
+		\end{column}
+	\end{columns}
+	\keymsg{Pila 100\,\% de código abierto, en contenedores y sobre hardware propio.}
+\end{frame}

@@ -1,7 +1,7 @@
-"""06 · Concurrencia: ¿qué pasa cuando muchos usuarios preguntan a la vez?
+"""02 · Concurrencia: ¿qué pasa cuando muchos usuarios preguntan a la vez?
 
-    python ejemplos/06_concurrencia.py        # 8 peticiones simultáneas
-    python ejemplos/06_concurrencia.py 16
+    python ejemplos/02_concurrencia.py        # 8 peticiones simultáneas
+    python ejemplos/02_concurrencia.py 16
 
 Con vLLM (continuous batching) el rendimiento total crece con la concurrencia.
 Con Ollama en CPU se ve cómo las peticiones se encolan (OLLAMA_NUM_PARALLEL limita el paralelismo).

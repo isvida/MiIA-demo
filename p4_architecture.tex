@@ -1,0 +1,131 @@
+%============================================================ BLOQUE 4 · Arquitectura (20 min)
+\ugrsection{04}{Arquitectura del servicio}{Inicio: 0:45 · 20 min\\Pasarela, escalado y operación}
+
+\ugrimageframe{imagenes/s04_pasarela.jpeg}{Un único punto de entrada}{Muchos clientes, una sola puerta y varios backends detrás · Ilustración generada con IA}
+
+\begin{frame}{Arquitectura del núcleo}{Modular, escalable en horizontal y con interfaces estándar}
+	\centering
+	\adjustbox{max width=\linewidth}{%
+		\begin{tikzpicture}
+			\node[bx,  minimum width=2.5cm, minimum height=1.2cm] (c) at (0,0)    {\textbf{Clientes}\\ navegador, IDE, apps};
+			\node[rbx, minimum width=2.5cm, minimum height=1.2cm] (n) at (3.9,0)  {\textbf{NGINX}\\ proxy inverso};
+			\node[rbx, minimum width=2.5cm, minimum height=1.2cm] (l) at (7.8,0)  {\textbf{LiteLLM}\\ pasarela};
+			\node[rbx, minimum width=2.5cm, minimum height=1.2cm] (v) at (11.7,0) {\textbf{vLLM}\\ inferencia en GPU};
+			\draw[ar] (c) -- (n); \draw[ar] (n) -- (l); \draw[ar] (l) -- (v);
+			\node[pbx, minimum width=3.4cm, minimum height=1.0cm] (k) at (5.85,2.0) {\textbf{Keycloak}\\ OAuth2, grupos de AD};
+			\draw[ar, dashed] (k) -- (n);
+			\node[lab, anchor=south] at (c.north) {API tipo OpenAI};
+			\node[lab, text width=3.4cm, align=center, anchor=north] at ([yshift=-0.15cm]n.south) {punto de entrada único\\ TLS, enrutado};
+			\node[lab, text width=3.4cm, align=center, anchor=north] at ([yshift=-0.15cm]l.south) {claves virtuales, límites,\\ enrutado, respaldo};
+			\node[lab, text width=3.6cm, align=center, anchor=north] at ([yshift=-0.15cm]v.south) {PagedAttention, batching,\\ salidas estructuradas};
+		\end{tikzpicture}}
+	\keymsg{Cada caja se sustituye o escala por separado; todas son contenedores.}
+\end{frame}
+
+\begin{frame}[fragile]{¿Por qué una pasarela? LiteLLM}{Un único endpoint delante de muchos backends}
+	\begin{columns}[T]
+		\begin{column}{0.46\textwidth}
+			\footnotesize
+			\begin{itemize}
+				\item Un endpoint tipo OpenAI, sobre modelos locales y en la nube.
+				\item \textbf{Claves virtuales} por usuario o servicio: nadie recibe la clave maestra.
+				\item Presupuestos y límites por clave.
+				\item Enrutado, reintentos y \textbf{respaldo} (\emph{fallback}).
+			\end{itemize}
+		\end{column}
+		\begin{column}{0.52\textwidth}
+			\begin{lstlisting}[language={}]
+model_list:
+  - model_name: miia-demo
+    litellm_params:
+      model: openai/Qwen2.5-3B-Instruct
+      api_base: http://vllm:8000/v1
+    - model_name: miia-respaldo
+      litellm_params:
+        model: ollama_chat/qwen2.5:3b
+        api_base: http://ollama:11434
+litellm_settings:
+  fallbacks: [{"miia-demo": ["miia-respaldo"]}]
+\end{lstlisting}
+			{\tiny\color{darkgray} Extracto de litellm/config.gpu.yaml del kit de demo.}
+		\end{column}
+	\end{columns}
+	\keymsg{Las aplicaciones hablan con un nombre estable; lo que hay detrás puede cambiar.}
+\end{frame}
+
+\begin{frame}{Escalar y conmutar por error}{Se añade capacidad añadiendo contenedores, sin rediseñar}
+	\begin{columns}[c]
+		\begin{column}{0.56\textwidth}
+			\centering
+			\adjustbox{max width=0.88\linewidth}{%
+				\begin{tikzpicture}
+					\node[bx, minimum width=3.6cm] (cl) at (0,3.0) {Clientes (API tipo OpenAI)};
+					\node[rbx, minimum width=2.6cm, minimum height=0.9cm] (lt) at (0,1.5) {\textbf{LiteLLM}};
+					\node[gbx, minimum width=1.9cm, minimum height=0.9cm] (g1) at (-2.6,-0.3) {vLLM\\ GPU 1};
+					\node[gbx, minimum width=1.9cm, minimum height=0.9cm] (g2) at (-0.3,-0.3) {vLLM\\ GPU 2};
+					\node[gbx, minimum width=1.9cm, minimum height=0.9cm] (g3) at (2.0,-0.3) {vLLM\\ GPU $N$};
+					\node[abx, minimum width=2.4cm, minimum height=0.9cm] (cd) at (5.0,-0.3) {Nube\\ proveedor};
+					\draw[ar] (cl) -- (lt);
+					\draw[ar] (lt) -- (g1); \draw[ar] (lt) -- (g2); \draw[ar] (lt) -- (g3);
+					\draw[ar, dashed] (lt) -- (cd) node[pos=0.55, above right, lab] {respaldo};
+				\end{tikzpicture}}
+		\end{column}
+		\begin{column}{0.42\textwidth}
+			\footnotesize
+			\begin{itemize}
+				\item Un vLLM nuevo con su GPU, registrado en LiteLLM.
+				\item Picos o mantenimiento: enrutado a la nube, misma API.
+				\item MiIA: una RTX~4060~Ti (16~GB) y luego una DGX Spark.
+			\end{itemize}
+		\end{column}
+	\end{columns}
+	\keymsg{La resiliencia nace de la abstracción: el cliente no sabe qué backend responde.}
+\end{frame}
+
+\begin{frame}{Opéralo como cualquier otro servicio}{Qué cambia cuando la carga de trabajo es un LLM}
+	\begin{columns}[T]
+		\begin{column}{0.5\textwidth}
+			\themeblock{nA}{Monitorizar}{Cola, tiempo al primer token, tokens/s y GPU. vLLM expone \texttt{/metrics}.}\\[6pt]
+			\themeblock{nB}{Planificar la capacidad}{Usuarios simultáneos $\times$ longitud de contexto fijan la memoria; haz pruebas de carga.}
+		\end{column}
+		\begin{column}{0.5\textwidth}
+			\themeblock{nE}{Gestionar el cambio}{Fija versiones; prueba el modelo nuevo en la pasarela antes de mover clientes.}\\[6pt]
+			\themeblock{rojoUGR}{Proteger y contabilizar}{TLS en el borde, internos sin exponer, rotación de claves y consumo por clave.}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Hoja de ruta: Kubernetes}{De contenedores gestionados a mano a operaciones declarativas}
+	\begin{columns}[c]
+		\begin{column}{0.46\textwidth}
+			\centering
+			\adjustbox{max width=\linewidth}{%
+				\begin{tikzpicture}
+					\node[bx, minimum width=4.6cm] (i) at (0,3.3) {Ingress (NGINX)};
+					\node[rbx, minimum width=4.6cm] (a) at (0,2.2) {Despliegue de LiteLLM\\ {\scriptsize varias réplicas}};
+					\node[gbx, minimum width=4.6cm] (b) at (0,1.0) {Despliegues de vLLM\\ {\scriptsize autoescalados con HPA}};
+					\node[bx, minimum width=4.6cm, fill=ugrLine] (c) at (0,-0.2) {Pool de nodos GPU\\ {\scriptsize NVIDIA GPU Operator}};
+					\draw[ar] (i) -- (a); \draw[ar] (a) -- (b); \draw[ar] (b) -- (c);
+				\end{tikzpicture}}
+		\end{column}
+		\begin{column}{0.52\textwidth}
+			\small
+			\begin{itemize}
+				\item \textbf{HPA}: escala las réplicas de vLLM según la cola o el uso de GPU.
+				\item \textbf{GPU Operator}: controladores y plugins de dispositivo gestionados.
+				\item \textbf{Helm}: toda la pila como charts declarativos.
+				\item \textbf{KServe}: puede escalar a cero sin demanda.
+			\end{itemize}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Práctica: pasarela, claves y respaldo}{Demo del bloque 4}
+	\detailbox{nB}{Prueba}{Abre \texttt{localhost:4000/ui} (usuario \texttt{admin}, contraseña \texttt{admin}) y crea una clave virtual con un presupuesto pequeño.}
+	\begin{itemize}
+		\small
+		\item Usa la clave nueva en lugar de la maestra en \texttt{01\_hola\_api.py} y mira crecer el consumo en el panel.
+		\item Añade un segundo modelo en \texttt{litellm/config.yaml} y llámalo por su nombre.
+		\item Con GPU: arranca el perfil \texttt{gpu}, para \texttt{vllm} y repite una petición: responde el backend en CPU.
+	\end{itemize}
+\end{frame}

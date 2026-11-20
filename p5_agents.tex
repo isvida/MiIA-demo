@@ -1,0 +1,575 @@
+%============================================================ BLOQUE 5 · Agentes, MCP, skills (25 min)
+\ugrsection{05}{Agentes, MCP y skills}{Inicio: 1:05 · 25 min\\De los chats a los agentes}
+
+\ugrimageframe{imagenes/s05_agente.jpeg}{De responder a actuar}{Un modelo, un banco de herramientas y un bucle · Ilustración generada con IA}
+
+\ugrstatement{Un agente es un modelo con herramientas, dentro de un bucle.}{Un chat responde; un agente actúa y comprueba el resultado}
+
+\begin{frame}{De los chats a los agentes}{Un agente = un modelo + herramientas + un bucle + contexto}
+	\centering
+	\adjustbox{max width=\linewidth}{%
+		\begin{tikzpicture}
+			\node[abx, minimum width=2.2cm, minimum height=1.4cm] (an) at (-4.8,0) {\textbf{Respuesta}\\ \textbf{final}};
+			\node[bbx, minimum width=2.8cm, minimum height=1.4cm] (llm) at (0,0) {\textbf{LLM}\\ decide el\\ siguiente paso};
+			\node[gbx, minimum width=3.8cm, minimum height=1.4cm] (tl) at (6.3,0) {\textbf{Herramientas}\\ ficheros, shell, búsqueda\\ APIs, servidores MCP};
+			\draw[ar] (llm.north east) to[bend left=30] node[above, lab] {llamada a herramienta} (tl.north west);
+			\draw[ar] (tl.south west) to[bend left=30] node[below, lab] {resultado} (llm.south east);
+			\draw[ar] (llm) -- node[above, lab] {sin herramientas} (an);
+			\node[bx, dashed, minimum width=11.0cm] at (0.9,-2.3) {contexto: prompt de sistema + mensajes + resultados de herramientas (crece en cada paso)};
+		\end{tikzpicture}}
+	\keymsg{El bucle termina cuando el modelo ya no pide más herramientas.}
+\end{frame}
+
+\begin{frame}[fragile]{El bucle completo, en una docena de líneas}{Simplificado de ejemplos/agent\_core.py del kit de demo}
+	\begin{columns}[T]
+		\begin{column}{0.62\textwidth}
+			\begin{lstlisting}
+messages = [system_prompt, user_task]
+for step in range(MAX_STEPS):
+    reply = llm(messages, tools)
+    if not reply.tool_calls:
+        return reply.content          # terminado
+    messages.append(reply)
+    for call in reply.tool_calls:
+        result = run_tool(call)       # aquí se piden permisos
+        messages.append(
+            tool_message(call.id, result[:4000]))
+\end{lstlisting}
+		\end{column}
+		\begin{column}{0.34\textwidth}
+			\footnotesize
+			\begin{itemize}
+				\item Los errores vuelven al modelo, que puede corregirse.
+				\item Las salidas largas se truncan.
+				\item Un límite de pasos evita bucles infinitos.
+			\end{itemize}
+		\end{column}
+	\end{columns}
+	\keymsg{Permisos, sandbox, memoria y subagentes son capas alrededor de este bucle.}
+\end{frame}
+
+\begin{frame}{Anatomía de un agente («harness»)}{Lo que añaden herramientas tipo OpenCode alrededor del bucle}
+	\centering
+	\adjustbox{max width=\linewidth}{%
+		\begin{tikzpicture}
+			\node[rbx, minimum width=13.2cm, minimum height=0.9cm] at (6.6,1.5)
+			{\textbf{Bucle del agente}: modelo $\rightarrow$ llamadas a herramientas $\rightarrow$ resultados $\rightarrow$ modelo};
+			\foreach \x/\sty/\t/\d in {
+			0/bbx/Reglas/{prompt de sistema,\\ reglas del proyecto},
+			3.4/gbx/Herramientas/{leer, editar,\\ buscar, shell},
+			6.8/abx/Permisos/{preguntar,\\ permitir, denegar},
+			10.2/pbx/Contexto/{truncado,\\ compactación}}
+			\node[\sty, minimum width=3.0cm, minimum height=1.2cm, anchor=west] at (\x,0) {\textbf{\t}\\ \d};
+			\foreach \x/\sty/\t/\d in {
+			0/pbx/Subagentes/{contextos aislados},
+			3.4/abx/Sandbox/{contenedor o VM},
+			6.8/gbx/Extensiones/{servidores MCP,\\ skills},
+			10.2/bbx/Modelo/{cualquier endpoint\\ compatible con OpenAI}}
+			\node[\sty, minimum width=3.0cm, minimum height=1.2cm, anchor=west] at (\x,-1.5) {\textbf{\t}\\ \d};
+		\end{tikzpicture}}
+	\keymsg{El modelo es un componente más; el comportamiento viene de su «harness».}
+\end{frame}
+
+\begin{frame}{Demo 05: ¿qué vamos a hacer?}{Pedir a un agente que prepare un informe de incidencias}
+	\begin{columns}[T]
+		\begin{column}{0.31\textwidth}
+			\ugrcard[nA]{1}{Entrada}{Una carpeta con incidencias y una skill con instrucciones para redactar el informe.}
+		\end{column}
+		\begin{column}{0.31\textwidth}
+			\ugrcard[nB]{2}{Proceso}{El agente puede cargar la skill, leer los ficheros y solicitar la escritura.}
+		\end{column}
+		\begin{column}{0.31\textwidth}
+			\ugrcard[nE]{3}{Resultado}{Si completa la tarea y autorizamos la escritura, crea o sobrescribe \texttt{informe.md}.}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Demo 05: ¿cómo se define este agente?}{No hay una clase «Agente»: el programa reúne sus componentes}
+	\begin{columns}[T]
+		\begin{column}{0.57\textwidth}
+			\begin{lstlisting}
+config = cargar_config()
+client = AsyncOpenAI(base_url=config.base_url,
+                     api_key=config.api_key)
+
+final = await run_agent(
+    client, config.model, TAREA, TOOLS, dispatch,
+    system=SYSTEM,
+    temperature=config.temperature,
+    no_think=config.no_think)
+\end{lstlisting}
+			{\scriptsize Extracto de \texttt{main()} en \texttt{05\_agente\_minimo.py}.}
+		\end{column}
+		\begin{column}{0.41\textwidth}
+			\footnotesize
+			\begin{itemize}
+				\setlength{\itemsep}{1pt}
+				\item \texttt{client} y \texttt{config.model}: servidor y modelo.
+				\item \texttt{SYSTEM}: instrucciones y catálogo; \texttt{TAREA}: objetivo.
+				\item \texttt{TOOLS}: herramientas disponibles; \texttt{dispatch}: ejecución local.
+				\item \texttt{run\_agent}: el bucle compartido en \texttt{agent\_core.py}.
+			\end{itemize}
+		\end{column}
+	\end{columns}
+	\demoline{05\_agente\_minimo.py}
+	\keymsg{El agente combina modelo, herramientas y conversación.}
+\end{frame}
+
+\begin{frame}[fragile]{Demo 05: ¿de dónde sale la skill?}{El programa la lee localmente antes de consultar al modelo}
+	\begin{columns}[T]
+		\begin{column}{0.53\textwidth}
+			\begin{lstlisting}[language={}]
+skills/informe-incidencias/SKILL.md
+---
+name: informe-incidencias
+description: Cómo redactar el informe...
+---
+# Informe de incidencias
+1. Título del informe.
+2. Tabla ordenada por prioridad.
+3. Acciones recomendadas.
+4. No inventes datos.
+\end{lstlisting}
+			{\scriptsize Contenido abreviado del fichero de la demo.}
+		\end{column}
+		\begin{column}{0.45\textwidth}
+			\footnotesize
+			\begin{enumerate}
+				\item \texttt{catalogo\_skills()} lee los ficheros \texttt{SKILL.md} y guarda nombre, descripción e instrucciones en \texttt{SKILLS}.
+				\item \texttt{SYSTEM} incluye solo los \textbf{nombres y descripciones} del catálogo.
+				\item \texttt{cargar\_skill(nombre)} devuelve el cuerpo guardado para una skill concreta.
+			\end{enumerate}
+		\end{column}
+	\end{columns}
+	\keymsg{El fichero se lee al iniciar; sus instrucciones se envían al modelo solo si este pide la skill.}
+\end{frame}
+
+\begin{frame}[fragile]{Demo 05: la primera petición al modelo}{El cliente envía instrucciones, tarea y herramientas}
+	\begin{columns}[T]
+		\begin{column}{0.54\textwidth}
+			\begin{lstlisting}[language={}]
+system: Eres un agente que trabaja
+  con ficheros. Si una tarea coincide
+  con una skill, cárgala.
+  Skills disponibles:
+  - informe-incidencias: Cómo redactar
+    el informe semanal de incidencias...
+
+user: Carga informe-incidencias, lee las
+  incidencias y crea informe.md...
+
+tools: listar_directorio, leer_fichero,
+  escribir_fichero, cargar_skill
+\end{lstlisting}
+			{\scriptsize Representación abreviada; cada herramienta incluye su descripción y parámetros.}
+		\end{column}
+		\begin{column}{0.44\textwidth}
+			\footnotesize
+			\begin{itemize}
+				\setlength{\itemsep}{1pt}
+				\item El sistema contiene el nombre y la descripción de \textbf{todas las skills} del catálogo, no sus instrucciones completas.
+				\item La tarea predeterminada pide expresamente cargar \texttt{informe-incidencias}.
+				\item Se describen las cuatro herramientas; su código Python no se envía.
+				\item En cada petición posterior se envían también las descripciones de herramientas.
+			\end{itemize}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Demo 05: ¿qué viaja al servidor LLM?}{Ejemplo de carga de \texttt{informe-incidencias}}
+	\centering
+	\adjustbox{max width=\linewidth,max height=3.4cm}{%
+		\begin{tikzpicture}[every node/.append style={font=\footnotesize}]
+			\node[bbx, minimum width=3.0cm, minimum height=0.65cm] at (0,0) {\textbf{Programa del agente}};
+			\node[rbx, minimum width=3.0cm, minimum height=0.65cm] at (10.4,0) {\textbf{Servidor LLM}};
+			\draw[ar] (0,-0.9) -- (10.4,-0.9);
+			\node[anchor=south, inner sep=1pt] at (5.2,-0.86) {1. Sistema: nombre y descripción de la skill + tarea + herramientas};
+			\draw[ar] (10.4,-1.65) -- (0,-1.65);
+			\node[anchor=south, inner sep=1pt] at (5.2,-1.61) {2. El modelo propone: \texttt{cargar\_skill("informe-incidencias")}};
+			\node[gbx, minimum width=8.2cm, minimum height=0.55cm] at (5.2,-2.4)
+				{3. El programa ejecuta la herramienta y obtiene el cuerpo del catálogo local};
+			\draw[ar] (0,-3.15) -- (10.4,-3.15);
+			\node[anchor=south, inner sep=1pt] at (5.2,-3.11) {4. Nueva petición: historial + instrucciones como resultado \texttt{tool}};
+			\draw[ar] (10.4,-3.9) -- (0,-3.9);
+			\node[anchor=south, inner sep=1pt] at (5.2,-3.86) {5. El modelo propone el siguiente paso o responde};
+		\end{tikzpicture}}
+	\par\vspace{2pt}
+	{\footnotesize La tarea predeterminada pide cargar la skill; la función la ejecuta el programa.\\
+	El resultado se incorpora al historial y puede truncarse a 4000 caracteres.}
+	\keymsg{El servidor recibe el texto de la skill, no el fichero.}
+\end{frame}
+
+\begin{frame}[fragile]{Demo 05: de la propuesta a la ejecución}{Una llamada a herramienta no es un comando de terminal}
+	\begin{columns}[T]
+		\begin{column}{0.56\textwidth}
+			{\footnotesize\textbf{Posible respuesta del modelo} (\texttt{tool\_calls}):}
+			\begin{lstlisting}[language={}]
+{
+  "id": "call_123",
+  "type": "function",
+  "function": {
+    "name": "cargar_skill",
+    "arguments": "{\"nombre\":\"informe-incidencias\"}"
+  }
+}
+\end{lstlisting}
+			{\scriptsize Ejemplo ilustrativo; el identificador puede variar.}
+		\end{column}
+		\begin{column}{0.42\textwidth}
+			\footnotesize
+			\begin{enumerate}
+				\setlength{\itemsep}{1pt}
+				\item El servidor presenta las herramientas; en modo automático el modelo puede pedir una o responder.
+				\item El cliente interpreta el JSON y busca el nombre en \texttt{FUNCIONES}. Ejecuta esa función Python, no un comando de shell.
+				\item Añade el resultado al historial como \texttt{tool} con el mismo identificador y consulta otra vez al modelo.
+			\end{enumerate}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Demo 05: del informe solicitado al fichero}{Una posible secuencia; las decisiones del modelo pueden variar}
+	\begin{lstlisting}[language={}]
+docker compose run --rm lab python ejemplos/05_agente_minimo.py
+\end{lstlisting}
+	\begin{center}
+		\adjustbox{max width=\linewidth}{%
+			\begin{tikzpicture}[every node/.append style={font=\footnotesize}]
+				\node[bbx, minimum width=2.2cm, minimum height=0.65cm] at (0,0) {Cargar skill};
+				\draw[ar] (1.2,0) -- (2.1,0);
+				\node[gbx, minimum width=2.3cm, minimum height=0.65cm] at (3.3,0) {Listar y leer};
+				\draw[ar] (4.5,0) -- (5.4,0);
+				\node[abx, minimum width=2.2cm, minimum height=0.65cm] at (6.6,0) {Pedir escritura};
+				\draw[ar] (7.8,0) -- (8.7,0);
+				\node[rbx, minimum width=2.7cm, minimum height=0.65cm] at (10.1,0) {Permiso $\rightarrow$ informe};
+			\end{tikzpicture}}
+	\end{center}
+	\begin{itemize}
+		\footnotesize
+		\item El modelo pide listar y leer las incidencias; el programa ejecuta cada herramienta y le devuelve el resultado.
+		\item Para crear o sobrescribir \texttt{informe.md}, el programa pide confirmación; \texttt{--auto} la omite. Las rutas fuera del sandbox se rechazan.
+		\item Tras la respuesta final, la tarea predeterminada comprueba que se cargó la skill y se escribió contenido; si no, termina con error.
+	\end{itemize}
+	\keymsg{El modelo propone; el programa ejecuta, aplica permisos y comprueba el resultado.}
+\end{frame}
+
+\begin{frame}{MCP: conectar IA y herramientas}{Model Context Protocol, un estándar abierto}
+	\begin{columns}[c]
+		\begin{column}{0.6\textwidth}
+			\centering
+			\imgslot{mcp_conector.jpeg}{\linewidth}{3.5cm}{Un único conector estándar entre clientes (chat, IDE, agente) y servicios (ficheros, tickets, base de datos)}
+		\end{column}
+		\begin{column}{0.36\textwidth}
+			\bigstat{N + M}{integraciones con MCP, frente a $N \times M$ sin estándar.}\\[6pt]
+			{\footnotesize Estándar abierto introducido por Anthropic; hoy ampliamente adoptado.}
+		\end{column}
+	\end{columns}
+	\keymsg{La integración se escribe una vez; cualquier cliente compatible con MCP puede usarla.}
+\end{frame}
+
+\begin{frame}[fragile]{Qué expone un servidor MCP}{Tools, resources y prompts, descubiertos en tiempo de ejecución}
+	\begin{columns}[T]
+		\begin{column}{0.56\textwidth}
+			\begin{lstlisting}
+mcp = FastMCP("ugr-demo")
+@mcp.tool()
+def crear_ticket(titulo: str, descripcion: str,
+                 prioridad: str = "media") -> str:
+    """Crea un ticket de soporte."""
+    ...
+@mcp.resource("ugr://master/especialidades")
+def especialidades() -> str: ...
+mcp.run(transport="streamable-http")
+\end{lstlisting}
+			{\tiny\color{darkgray} Simplificado de mcp/server.py del kit de demo.}
+		\end{column}
+		\begin{column}{0.4\textwidth}
+			\footnotesize
+			\begin{itemize}
+				\item \textbf{Tools}: acciones del modelo.
+				\item \textbf{Resources}: datos de solo lectura.
+				\item \textbf{Prompts}: plantillas de instrucciones reutilizables.
+			\end{itemize}
+		\end{column}
+	\end{columns}
+	\keymsg{El cliente descubre tools, resources y prompts con operaciones MCP distintas.}
+\end{frame}
+
+\begin{frame}{Demo 06: ¿qué vamos a hacer?}{Consultar asignaturas de IoT y crear un ticket con un agente MCP}
+	\begin{columns}[T]
+		\begin{column}{0.31\textwidth}
+			\ugrcard[nA]{1}{Entrada}{Una tarea: consultar las asignaturas de IoT, crear un ticket y listar los tickets.}
+		\end{column}
+		\begin{column}{0.31\textwidth}
+			\ugrcard[nB]{2}{Proceso}{El agente descubre las herramientas en un servidor MCP y puede pedir que se ejecuten.}
+		\end{column}
+		\begin{column}{0.31\textwidth}
+			\ugrcard[nE]{3}{Resultado}{Si completa la tarea, muestra los tickets y deja creado uno de prioridad baja.}
+		\end{column}
+	\end{columns}
+	{\footnotesize Crear un ticket modifica datos persistentes y esta demo no pide confirmación.}
+\end{frame}
+
+\begin{frame}[fragile]{Demo 06: ¿cómo se define este agente?}{El mismo bucle que en la demo 05, con herramientas de un servidor MCP}
+	\begin{columns}[T]
+		\begin{column}{0.58\textwidth}
+			\begin{lstlisting}
+async with streamablehttp_client(MCP_URL) as (
+        read, write, _):
+    async with ClientSession(read, write) as mcp:
+        await mcp.initialize()
+        descubiertas = (await mcp.list_tools()).tools
+        # ... preparar tools y dispatch ...
+        final = await run_agent(
+            client, config.model, TAREA,
+            tools, dispatch,
+            temperature=config.temperature,
+            no_think=config.no_think)
+\end{lstlisting}
+		\end{column}
+		\begin{column}{0.4\textwidth}
+			\footnotesize
+			\begin{itemize}
+				\setlength{\itemsep}{1pt}
+				\item El programa abre una sesión HTTP con el servidor MCP y descubre sus herramientas.
+				\item \texttt{run\_agent} sigue hablando con el servidor LLM y mantiene la conversación.
+				\item \texttt{dispatch} reenvía las peticiones al servidor MCP.
+			\end{itemize}
+		\end{column}
+	\end{columns}
+	\demoline{06\_agente\_mcp.py}
+	\keymsg{Dos servicios: el modelo decide y el servidor MCP ejecuta.}
+\end{frame}
+
+\begin{frame}[fragile]{Demo 06: descubrir y presentar herramientas}{El cliente traduce las descripciones MCP al formato de la API del LLM}
+	\begin{columns}[T]
+		\begin{column}{0.56\textwidth}
+			\begin{lstlisting}
+descubiertas = (await mcp.list_tools()).tools
+tools = [{
+    "type": "function",
+    "function": {
+        "name": t.name,
+        "description": t.description or "",
+        "parameters": t.inputSchema,
+    },
+} for t in descubiertas]
+\end{lstlisting}
+			{\scriptsize Cada herramienta aporta nombre, descripción y esquema de entrada.}
+		\end{column}
+		\begin{column}{0.42\textwidth}
+			\footnotesize
+			\begin{itemize}
+				\setlength{\itemsep}{1pt}
+				\item El servidor ofrece \texttt{listar\_asignaturas}, \texttt{hora\_actual}, \texttt{crear\_ticket} y \texttt{listar\_tickets}.
+				\item El cliente envía esas descripciones al LLM con la tarea, no el código de las funciones.
+				\item También lista recursos y prompts MCP, pero esta demo no los envía ni los usa automáticamente.
+			\end{itemize}
+		\end{column}
+	\end{columns}
+	\keymsg{El cliente describe al LLM las herramientas disponibles.}
+\end{frame}
+
+\begin{frame}{Demo 06: ¿quién habla con quién?}{El agente hace de intermediario entre el LLM y el servidor MCP}
+	\centering
+	\adjustbox{max width=\linewidth,max height=3.8cm}{%
+		\begin{tikzpicture}[every node/.append style={font=\footnotesize}]
+			\node[rbx, minimum width=2.2cm, minimum height=0.65cm] at (0,0) {\textbf{Servidor LLM}};
+			\node[bbx, minimum width=2.2cm, minimum height=0.65cm] at (5.5,0) {\textbf{Agente}};
+			\node[gbx, minimum width=2.2cm, minimum height=0.65cm] at (11,0) {\textbf{Servidor MCP}};
+			\draw[ar] (5.5,-0.85) -- (11,-0.85);
+			\node[anchor=south, inner sep=1pt] at (8.25,-0.81) {1. Descubrir herramientas};
+			\draw[ar] (11,-1.45) -- (5.5,-1.45);
+			\node[anchor=south, inner sep=1pt] at (8.25,-1.41) {2. Nombres, descripciones y esquemas};
+			\draw[ar] (5.5,-2.05) -- (0,-2.05);
+			\node[anchor=south, inner sep=1pt] at (2.75,-2.01) {3. Tarea y herramientas};
+			\draw[ar] (0,-2.65) -- (5.5,-2.65);
+			\node[anchor=south, inner sep=1pt] at (2.75,-2.61) {4. Propuesta de llamada};
+			\draw[ar] (5.5,-3.25) -- (11,-3.25);
+			\node[anchor=south, inner sep=1pt] at (8.25,-3.21) {5. Ejecutar herramienta};
+			\draw[ar] (11,-3.85) -- (5.5,-3.85);
+			\node[anchor=south, inner sep=1pt] at (8.25,-3.81) {6. Resultado o error};
+			\draw[ar] (5.5,-4.45) -- (0,-4.45);
+			\node[anchor=south, inner sep=1pt] at (2.75,-4.41) {7. Conversación + resultado};
+		\end{tikzpicture}}
+	\par\vspace{2pt}
+	{\footnotesize Después, el modelo puede pedir otra herramienta o responder.}
+	\keymsg{El LLM no llama al servidor MCP directamente: lo hace el programa del agente.}
+\end{frame}
+
+\begin{frame}[fragile]{Demo 06: de la propuesta al resultado}{El cliente traduce la petición del modelo en una llamada MCP}
+	\begin{columns}[T]
+		\begin{column}{0.55\textwidth}
+			{\footnotesize\textbf{Posible solicitud del modelo}:}
+			\begin{lstlisting}[language={}]
+{
+  "name": "listar_asignaturas",
+  "arguments": "{\"especialidad\":\"iot\"}"
+}
+\end{lstlisting}
+			{\footnotesize\textbf{Ejecución en el agente}:}
+			\begin{lstlisting}
+res = await mcp.call_tool(nombre, argumentos)
+\end{lstlisting}
+			{\scriptsize Solicitud abreviada: en la respuesta también hay un identificador de llamada.}
+		\end{column}
+		\begin{column}{0.43\textwidth}
+			\footnotesize
+			\begin{enumerate}
+				\setlength{\itemsep}{1pt}
+				\item El cliente interpreta los argumentos JSON y pide al servidor MCP que ejecute la herramienta.
+				\item El servidor MCP ejecuta su función y devuelve el resultado al cliente.
+				\item El cliente devuelve el resultado o error al LLM con la conversación. El identificador lo vincula con la petición.
+			\end{enumerate}
+		\end{column}
+	\end{columns}
+	\keymsg{La herramienta se ejecuta en el servidor MCP, no en una shell del cliente.}
+\end{frame}
+
+\begin{frame}[fragile]{Demo 06: ejecutar y comprobar el resultado}{La tarea predeterminada consulta IoT y crea un ticket}
+	\begin{lstlisting}[language={}]
+docker compose run --rm lab python ejemplos/06_agente_mcp.py
+\end{lstlisting}
+	\begin{center}
+		\adjustbox{max width=\linewidth}{%
+			\begin{tikzpicture}[every node/.append style={font=\footnotesize}]
+				\node[bbx, minimum width=2.3cm, minimum height=0.65cm] at (0,0) {Descubrir tools};
+				\draw[ar] (1.2,0) -- (2.1,0);
+				\node[gbx, minimum width=2.3cm, minimum height=0.65cm] at (3.3,0) {Consultar IoT};
+				\draw[ar] (4.5,0) -- (5.4,0);
+				\node[abx, minimum width=2.2cm, minimum height=0.65cm] at (6.6,0) {Crear ticket};
+				\draw[ar] (7.8,0) -- (8.7,0);
+				\node[rbx, minimum width=2.3cm, minimum height=0.65cm] at (9.9,0) {Listar tickets};
+			\end{tikzpicture}}
+	\end{center}
+	\begin{itemize}
+		\footnotesize
+		\item Esta es una secuencia posible: el modelo puede responder sin llamar herramientas o no completar la tarea.
+		\item Si se crea un ticket, queda en \texttt{workspace/tickets.jsonl}; cada ejecución puede añadir otro.
+		\item A diferencia de la demo 05, este ejemplo no pide confirmación antes de crear el ticket.
+	\end{itemize}
+	\keymsg{Un servidor MCP puede realizar cambios persistentes: controla qué herramientas expones.}
+\end{frame}
+
+\begin{frame}{Herramientas, MCP, skills y subagentes}{Quién hace qué}
+	\begin{columns}[T]
+		\begin{column}{0.225\textwidth}
+			\ugrcard[nA]{1}{Herramienta}{Función pedida por el modelo (fichero, API).}
+		\end{column}
+		\begin{column}{0.225\textwidth}
+			\ugrcard[nB]{2}{MCP}{Todo por un protocolo estándar.}
+		\end{column}
+		\begin{column}{0.225\textwidth}
+			\ugrcard[nE]{3}{Skill}{Carpeta con un \texttt{SKILL.md}: saber hacer.}
+		\end{column}
+		\begin{column}{0.225\textwidth}
+			\ugrcard[nD]{4}{Subagente}{Contexto propio: aísla y paraleliza.}
+		\end{column}
+	\end{columns}
+	\keymsg{MCP da capacidades al agente; las skills le dan saber hacer.}
+\end{frame}
+
+\begin{frame}{Skills: saber hacer bajo demanda}{La revelación progresiva mantiene el contexto pequeño}
+	\begin{columns}[c]
+		\begin{column}{0.5\textwidth}
+			\centering
+			\imgslot{skills_carpetas.jpeg}{\linewidth}{4.0cm}{Estantería de carpetas cerradas con solo la pestaña visible; una carpeta abierta}
+		\end{column}
+		\begin{column}{0.46\textwidth}
+			\begin{enumerate}
+				\item El agente solo ve el \textbf{nombre y la descripción} de cada skill.
+				\item Si una tarea encaja, carga el \texttt{SKILL.md} completo.
+				\item Sigue las instrucciones y continúa el bucle.
+			\end{enumerate}
+		\end{column}
+	\end{columns}
+	\keymsg{Las skills recogen cómo hace las cosas tu organización, sin reentrenar nada.}
+\end{frame}
+
+\begin{frame}[fragile]{Una skill es texto plano}{Fácil de escribir, revisar, versionar y compartir}
+	\begin{columns}[T]
+		\begin{column}{0.55\textwidth}
+			\begin{lstlisting}[language={}]
+---
+name: informe-incidencias
+description: Cómo redactar el informe
+  semanal de incidencias.
+---
+# Informe de incidencias
+1. Título «# Informe de incidencias».
+2. Una tabla ordenada de mayor a
+   menor prioridad.
+3. No inventes datos: escribe
+   «no consta».
+\end{lstlisting}
+			{\tiny\color{darkgray} Basado en workspace/skills del kit de demo.}
+		\end{column}
+		\begin{column}{0.4\textwidth}
+			\ugrfact[Para tu organización]{Un procedimiento interno, un estilo de redacción o una lista de comprobación: todo cabe en un \texttt{SKILL.md}.}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Agentes de código: OpenCode y OpenClaw}{El mismo bucle, otra superficie: el terminal y tus apps de mensajería}
+	\begin{columns}[T]
+		\begin{column}{0.5\textwidth}
+			\themeblock{nA}{OpenCode}{%
+				Agente de código abierto para terminal.\\
+				Lee y edita tu repo y ejecuta comandos.\\
+				Modo plan: propone. Modo build: aplica.\\
+				Se apunta a tu pasarela y se amplía con MCP.}
+		\end{column}
+		\begin{column}{0.5\textwidth}
+			\themeblock{nBrown}{OpenClaw}{%
+				Pasarela autoalojada para mensajería (WhatsApp, Telegram y Slack).\\
+				Ejecuta código, navega y busca en la web; integra MCP y skills.\\
+				Admite modelos locales (vLLM y Ollama).}
+		\end{column}
+	\end{columns}
+	\srcline{OpenReplay, «OpenCode AI coding agent»; docs.openclaw.ai; Backslash Security, «OpenClaw security risks explained» (2026).}
+	\keymsg{Se han visto instancias expuestas y skills maliciosas: contén más cuanto más hace.}
+\end{frame}
+
+\begin{frame}{Los agentes cambian el modelo de amenazas}{Inyección de prompts, permisos y cadena de suministro}
+	\begin{columns}[c]
+		\begin{column}{0.42\textwidth}
+			\centering
+			\imgslot{inyeccion_prompt.jpeg}{\linewidth}{3.5cm}{Un documento con una nota roja oculta que llega a un agente con llaves y permisos}
+		\end{column}
+		\begin{column}{0.54\textwidth}
+			\small
+			\begin{itemize}
+				\item \textbf{Inyección de prompts}: webs, correos y documentos pueden llevar instrucciones ocultas.
+				\item \textbf{Permisos excesivos}: todo el sistema de ficheros, shell, tokens de larga duración.
+				\item \textbf{Cadena de suministro}: skills y servidores MCP de terceros corren con tus privilegios.
+			\end{itemize}
+		\end{column}
+	\end{columns}
+	\keymsg{Mezcla peligrosa: datos privados + contenido no confiable + una vía de salida. Un modelo local protege \emph{adónde van los datos}, no \emph{lo que hace el agente}.}
+\end{frame}
+
+\begin{frame}{Salvaguardas}{Da a un agente el acceso de un compañero nuevo el primer día}
+	\begin{columns}[T]
+		\begin{column}{0.31\textwidth}
+			\ugrcard[nB]{1}{Mínimo privilegio}{Lectura por defecto; sandbox y reglas de red.}
+		\end{column}
+		\begin{column}{0.31\textwidth}
+			\ugrcard[nB]{2}{Humano en el circuito}{Aprobación humana para escribir, borrar y enviar.}
+		\end{column}
+		\begin{column}{0.31\textwidth}
+			\ugrcard[nB]{3}{Revisar y registrar}{Audita skills y MCP; registra llamadas.}
+		\end{column}
+	\end{columns}
+	\keymsg{Da a un agente el acceso de un compañero nuevo el primer día, y nada más.}
+\end{frame}
+
+\begin{frame}{Práctica: agentes con ficheros, skills y MCP}{Demo del bloque 5}
+	\detailbox{nB}{Ejecuta}{\texttt{... python ejemplos/05\_agente\_minimo.py}\\
+		\texttt{... python ejemplos/06\_agente\_mcp.py}}
+	\begin{itemize}
+		\footnotesize
+		\item \texttt{05}: carga la skill \texttt{informe-incidencias}, lee tres incidencias y pide permiso antes de escribir \texttt{informe.md}.
+		\item Pídele leer \texttt{../etc/passwd}: el sandbox lo rechaza y el error vuelve al modelo.
+		\item \texttt{06}: el mismo bucle con herramientas del servidor MCP; tickets en \texttt{workspace/tickets.jsonl}.
+		\item El 3B por defecto flaquea en tareas largas: prueba un 7B (ver README).
+	\end{itemize}
+\end{frame}

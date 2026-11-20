@@ -33,7 +33,7 @@ flowchart LR
 ```
 
 LiteLLM ofrece una API compatible con OpenAI y presenta el modelo con el nombre
-`miia-demo`; por defecto Ollama ejecuta `qwen3.5:2b-q4_K_M` en CPU. El ejemplo 05
+`miia-demo`; por defecto Ollama ejecuta `qwen3.5:2b-q4_K_M` en CPU. El ejemplo 06
 también conecta con el servidor MCP. Los datos de los agentes están en
 [`workspace/`](../workspace/).
 
@@ -168,12 +168,35 @@ El primer uso también puede incluir la carga del modelo.
 **Para experimentar:** cambia la pregunta o compara los tiempos de dos ejecuciones.
 No interpretes una diferencia aislada como una comparación rigurosa de rendimiento.
 
-## 02 · Extraer información como JSON
+## 02 · Concurrencia
 
-**Archivo:** [`02_salida_estructurada.py`](02_salida_estructurada.py)
+**Archivo:** [`02_concurrencia.py`](02_concurrencia.py)
 
 ```bash
-docker compose run --rm lab python ejemplos/02_salida_estructurada.py
+docker compose run --rm lab python ejemplos/02_concurrencia.py
+docker compose run --rm lab python ejemplos/02_concurrencia.py 2
+```
+
+**Objetivo:** observar qué ocurre cuando llegan varias peticiones a la vez. Sin
+argumento se lanzan ocho; con un entero se usa ese número.
+
+El programa usa `AsyncOpenAI` y `asyncio.gather` para iniciar las peticiones sin
+esperar secuencialmente a cada una. Cada petición pregunta por un dato de Granada,
+con un máximo de 120 tokens de salida. Se imprime cuándo termina cada una y se
+suman los tokens de salida informados por la API. El rendimiento agregado es esa
+suma dividida entre el tiempo total; no es la velocidad de cada usuario.
+
+En el Compose predeterminado Ollama tiene `OLLAMA_NUM_PARALLEL=2`: más peticiones
+pueden tener que esperar. El resultado depende del modelo, contexto, hardware,
+carga, caché y longitud de las respuestas. El perfil vLLM actual utiliza otro
+modelo, así que compararlo directamente no aísla solo el efecto del motor.
+
+## 03 · Extraer información como JSON
+
+**Archivo:** [`03_salida_estructurada.py`](03_salida_estructurada.py)
+
+```bash
+docker compose run --rm lab python ejemplos/03_salida_estructurada.py
 ```
 
 **Objetivo:** comparar pedir JSON en lenguaje natural con solicitar una salida
@@ -204,12 +227,12 @@ para producción hacen falta validaciones y controles del contenido.
 ambas respuestas. El campo con `Optional` acepta `null`, no implica por sí solo
 que se pueda omitir.
 
-## 03 · Una llamada a herramienta, paso a paso
+## 04 · Una llamada a herramienta, paso a paso
 
-**Archivo:** [`03_tool_calling.py`](03_tool_calling.py)
+**Archivo:** [`04_tool_calling.py`](04_tool_calling.py)
 
 ```bash
-docker compose run --rm lab python ejemplos/03_tool_calling.py
+docker compose run --rm lab python ejemplos/04_tool_calling.py
 ```
 
 **Objetivo:** ver la separación entre lo que propone el modelo y lo que hace el
@@ -235,12 +258,12 @@ argumentos, permisos y errores antes de ejecutar acciones.
 **Para experimentar:** cambia las horas o añade otra función y su esquema.
 Comprueba siempre qué argumentos solicita el modelo y qué devuelve tu código.
 
-## 04 · Agente con archivos, permisos y skills
+## 05 · Agente con archivos, permisos y skills
 
-**Archivo:** [`04_agente_minimo.py`](04_agente_minimo.py)
+**Archivo:** [`05_agente_minimo.py`](05_agente_minimo.py)
 
 ```bash
-docker compose run --rm lab python ejemplos/04_agente_minimo.py
+docker compose run --rm lab python ejemplos/05_agente_minimo.py
 ```
 
 **Objetivo:** ampliar el tool calling a varias iteraciones para que el modelo
@@ -273,13 +296,13 @@ política de permisos adecuados en producción.
 Para una tarea propia, pásala entre comillas:
 
 ```bash
-docker compose run --rm lab python ejemplos/04_agente_minimo.py "Lista los archivos de incidencias"
+docker compose run --rm lab python ejemplos/05_agente_minimo.py "Lista los archivos de incidencias"
 ```
 
 Para omitir la confirmación y permitir escrituras dentro del sandbox:
 
 ```bash
-docker compose run --rm lab python ejemplos/04_agente_minimo.py --auto
+docker compose run --rm lab python ejemplos/05_agente_minimo.py --auto
 ```
 
 Usa `--auto` solo si aceptas que modifique archivos del sandbox. El comprobador
@@ -287,15 +310,15 @@ usa una copia temporal para no alterar tu `workspace`. La comprobación de la ta
 predeterminada verifica la carga de la skill y la escritura, **no** que el informe
 esté bien ordenado o sea fiel a los datos: revísalo antes de utilizarlo.
 
-## 05 · Agente con herramientas descubiertas por MCP
+## 06 · Agente con herramientas descubiertas por MCP
 
-**Archivo:** [`05_agente_mcp.py`](05_agente_mcp.py)
+**Archivo:** [`06_agente_mcp.py`](06_agente_mcp.py)
 
 ```bash
-docker compose run --rm lab python ejemplos/05_agente_mcp.py
+docker compose run --rm lab python ejemplos/06_agente_mcp.py
 ```
 
-**Objetivo:** usar el mismo bucle de agente del ejemplo 04, pero obtener las
+**Objetivo:** usar el mismo bucle de agente del ejemplo 05, pero obtener las
 herramientas desde un servicio externo mediante MCP (*Model Context Protocol*).
 
 1. El cliente abre una sesión HTTP con el servidor MCP y la inicializa.
@@ -314,36 +337,13 @@ prioridad baja y lista los tickets. **Crea datos persistentes** en
 una tarea propia, por ejemplo una consulta sin solicitar escrituras:
 
 ```bash
-docker compose run --rm lab python ejemplos/05_agente_mcp.py "Consulta las asignaturas de IoT"
+docker compose run --rm lab python ejemplos/06_agente_mcp.py "Consulta las asignaturas de IoT"
 ```
 
 El modelo decide qué herramientas llamar y puede no completar la tarea. Las
 pruebas automatizadas conectan con un MCP temporal para no crear tickets reales.
 El servidor ofrece herramientas capaces de escribir, por lo que un prompt de
 solo lectura no es una barrera de seguridad.
-
-## 06 · Concurrencia
-
-**Archivo:** [`06_concurrencia.py`](06_concurrencia.py)
-
-```bash
-docker compose run --rm lab python ejemplos/06_concurrencia.py
-docker compose run --rm lab python ejemplos/06_concurrencia.py 2
-```
-
-**Objetivo:** observar qué ocurre cuando llegan varias peticiones a la vez. Sin
-argumento se lanzan ocho; con un entero se usa ese número.
-
-El programa usa `AsyncOpenAI` y `asyncio.gather` para iniciar las peticiones sin
-esperar secuencialmente a cada una. Cada petición pregunta por un dato de Granada,
-con un máximo de 120 tokens de salida. Se imprime cuándo termina cada una y se
-suman los tokens de salida informados por la API. El rendimiento agregado es esa
-suma dividida entre el tiempo total; no es la velocidad de cada usuario.
-
-En el Compose predeterminado Ollama tiene `OLLAMA_NUM_PARALLEL=2`: más peticiones
-pueden tener que esperar. El resultado depende del modelo, contexto, hardware,
-carga, caché y longitud de las respuestas. El perfil vLLM actual utiliza otro
-modelo, así que compararlo directamente no aísla solo el efecto del motor.
 
 ## Solución de problemas
 

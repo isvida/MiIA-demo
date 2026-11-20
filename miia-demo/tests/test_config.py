@@ -113,7 +113,7 @@ class ConfigTests(unittest.TestCase):
                 env.pop(key, None)
             env.update({"MIIA_CONFIG": str(self.path), "TEST_KEY": "test-key"})
             result = subprocess.run(
-                [sys.executable, str(ROOT / "ejemplos/03_tool_calling.py")],
+                [sys.executable, str(ROOT / "ejemplos/04_tool_calling.py")],
                 env=env, capture_output=True, text=True, timeout=30,
             )
         finally:
