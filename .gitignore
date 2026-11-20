@@ -17,5 +17,5 @@
 *.vrb
 
 # Copias locales
-/miia-demo.zip
+/miia-demo/miia-demo.zip
 /miia-demo/ejemplos/config.json.ori
