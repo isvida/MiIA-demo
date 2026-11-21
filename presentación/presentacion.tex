@@ -1,6 +1,8 @@
 %==============================================================================
 %  Tu propio servicio de LLM — seminario, Máster en Desarrollo del Software (UGR)
-%  Estilo: latexUGR v2 (divulgación).  Compilar: pdflatex DOS veces.
+%  Estilo: latexUGR v2 (divulgación).  Compilar dos veces con pdflatex.
+%  Por defecto genera presentacion.pdf sin notas; para presentacion-notas.pdf:
+%  pdflatex -jobname=presentacion-notas '\def\showpresenternotes{1}\input{presentacion.tex}'
 %  Los bloques están en p1_why.tex ... p7_wrapup.tex (se incluyen más abajo).
 %  Las ilustraciones van en imagenes/ (ver imagenes/PROMPTS.md); si un fichero
 %  no existe, el documento compila igual y muestra un marcador con su nombre.
@@ -9,6 +11,11 @@
 %  UTF-8 y sin partición de palabras (la elección es automática).
 %==============================================================================
 \documentclass[aspectratio=169,11pt]{beamer}
+\ifdefined\showpresenternotes
+  \setbeameroption{show notes on second screen=right}
+\else
+  \setbeameroption{hide notes}
+\fi
 
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
@@ -109,6 +116,7 @@
 
 %--------------------------------------------------------------- agenda
 \begin{frame}{Agenda}{Tiempo transcurrido previsto al comenzar cada bloque · formato h:mm}
+	\note{Dos horas; señalar el orden y las demos.}
 	\vspace{0.1cm}
 	\begin{tikzpicture}
 		\foreach \n/\t/\m/\p [count=\i] in {
@@ -134,6 +142,7 @@
 
 %--------------------------------------------------------------- puesta en marcha
 \begin{frame}[fragile]{Antes de empezar: levanta la demo}{Una miniatura de la infraestructura real, sin necesidad de GPU}
+	\note{Dejar la descarga en marcha; servicios locales y URL de acceso.}
 	\begin{columns}[T]
 		\begin{column}{0.56\textwidth}
 			\begin{lstlisting}[language={}]
@@ -180,6 +189,7 @@ docker compose run --rm lab \
    Posible apertura de matrícula en diciembre.}
 
 \begin{frame}{Agradecimientos}{CSIRC · Apoyo a la Docencia}
+  \note{Equipo de apoyo a la docencia del CSIRC.}
   \centering
   \begin{tikzpicture}[
     persona/.style={bx, text width=3.4cm, minimum height=0.7cm,
@@ -211,6 +221,7 @@ docker compose run --rm lab \
 \end{frame}
 
 \begin{frame}{Agradecimientos}{Cátedra GPU Solutions-UGR}
+  \note{Agradecer el apoyo y el equipamiento de la Cátedra.}
   \begin{columns}[c]
     \begin{column}{0.53\textwidth}
       \centering

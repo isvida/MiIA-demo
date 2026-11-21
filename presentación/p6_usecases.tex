@@ -4,6 +4,7 @@
 \ugrimageframe{imagenes/s06_diplomas.jpeg}{11.500 diplomas, un único formato}{De documentos heterogéneos a datos validados · Ilustración generada con IA}
 
 \begin{frame}{Cinco servicios, un solo endpoint}{Todos los clientes hablan la misma API compatible con OpenAI}
+	\note{Chat, correo, IDE, terminal y EPFReader; herramientas habituales.}
 	\centering\footnotesize
 	\setlength{\tabcolsep}{3pt}
 	\begin{tabular}{@{}R{1.9cm}R{3.2cm}R{4.8cm}R{2.3cm}@{}}
@@ -21,6 +22,7 @@
 \end{frame}
 
 \begin{frame}{Caso práctico: EPFReader}{Diplomas de formación para la Carrera Horizontal del PTGAS}
+	\note{Más de 11.500 diplomas; campos estructurados; contraste manual.}
 	\begin{columns}[c]
 		\begin{column}{0.3\textwidth}
 			\bigstat{11.500+}{diplomas procesados.}
@@ -40,6 +42,7 @@
 \end{frame}
 
 \begin{frame}{Qué lo hizo funcionar}{Dos técnicas del bloque 3, aplicadas a gran escala}
+	\note{Esquema estricto y visión; validar no equivale a garantizar veracidad.}
 	\begin{columns}[T]
 		\begin{column}{0.5\textwidth}
 			\themeblock{rojoUGR}{Salida estructurada}{%
@@ -58,6 +61,7 @@
 \end{frame}
 
 \begin{frame}{El patrón se generaliza}{Cualquier proceso que parta de documentos heterogéneos}
+	\note{Esquema, extracción, validación, revisión humana y evaluación.}
 	{\footnotesize\color{darkgray}Candidatos:}\hspace{6pt}
 	\appchip{Matrículas}\hspace{4pt}\appchip{Becas}\hspace{4pt}\appchip{Certificados}\hspace{4pt}\appchip{Facturas}\hspace{4pt}\appchip{Cuestionarios}
 	\vspace{0.3cm}
@@ -71,6 +75,7 @@
 \end{frame}
 
 \begin{frame}{Demo 03: ¿qué vamos a hacer?}{Una versión reducida del patrón de extracción de EPFReader}
+	\note{Texto preparado; dos llamadas; comparar validación Pydantic.}
 	\begin{columns}[T]
 		\begin{column}{0.31\textwidth}
 			\ugrcard[nA]{1}{Entrada}{Un diploma inventado en texto, con errores que simulan una salida OCR.}
@@ -86,6 +91,7 @@
 \end{frame}
 
 \begin{frame}{Demo 03: comparar las dos peticiones}{El cliente comprueba ambas respuestas con el mismo modelo Pydantic}
+	\note{Peticiones independientes; solo la segunda incluye el esquema.}
 	\centering
 	\adjustbox{max width=\linewidth,max height=3.4cm}{%
 		\begin{tikzpicture}[every node/.append style={font=\footnotesize}]
@@ -106,6 +112,7 @@
 \end{frame}
 
 \begin{frame}[fragile]{Demo 03: preparar el texto y los campos}{El ejemplo recibe texto; el esquema define qué datos esperamos}
+	\note{Entrada con errores OCR; Pydantic define campos, tipos y opcionales.}
 	\begin{columns}[T]
 		\begin{column}{0.5\textwidth}
 			{\footnotesize\textbf{Fragmento del diploma inventado}:}
@@ -137,6 +144,7 @@ class Diploma(BaseModel):
 \end{frame}
 
 \begin{frame}[fragile]{Demo 03: primera petición, JSON sin esquema}{Pedimos un formato en el prompt y comprobamos la respuesta}
+	\note{Instrucción de texto no garantiza esquema; la validación puede fallar.}
 	\begin{columns}[T]
 		\begin{column}{0.58\textwidth}
 			\begin{lstlisting}
@@ -166,6 +174,7 @@ except (ValidationError, ValueError):
 \end{frame}
 
 \begin{frame}[fragile]{Demo 03: segunda petición, con esquema}{El cliente envía al servidor el contrato generado por Pydantic}
+	\note{JSON Schema estricto; motor restringe; cliente valida de nuevo.}
 	\begin{columns}[T]
 		\begin{column}{0.59\textwidth}
 			\begin{lstlisting}
@@ -198,6 +207,7 @@ diploma = Diploma.model_validate_json(
 \end{frame}
 
 \begin{frame}[fragile]{Demo 03: ejecutar e interpretar el resultado}{Desde \texttt{miia-demo}, con los servicios y el modelo preparados}
+	\note{Comparar ambas salidas; estructura válida no asegura datos correctos.}
 	\begin{lstlisting}[language={}]
 docker compose run --rm lab python ejemplos/03_salida_estructurada.py
 \end{lstlisting}
@@ -217,6 +227,7 @@ docker compose run --rm lab python ejemplos/03_salida_estructurada.py
 \end{frame}
 
 \begin{frame}{Verifica antes de fiarte}{La evaluación forma parte del sistema, no es un añadido}
+	\note{Muestra etiquetada; precisión por campo; revaluar cambios de modelo o prompt.}
 	\begin{enumerate}
 		\item Construye primero una \textbf{muestra etiquetada}: es tu referencia.
 		\item Informa de la \textbf{precisión por campo}, no de un «parece correcto».

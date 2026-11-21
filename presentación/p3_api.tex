@@ -2,6 +2,7 @@
 \ugrsection{03}{Hablar con un LLM}{Inicio: 0:30 · 15 min\\API, salida estructurada, herramientas y RAG}
 
 \begin{frame}[fragile]{La API compatible con OpenAI}{El estándar de facto: un mismo cliente para vLLM, Ollama, LiteLLM y la nube}
+	\note{SDK compatible no implica servicio OpenAI; cambiar base URL y modelo.}
 	\begin{columns}[T]
 		\begin{column}{0.58\textwidth}
 			\begin{lstlisting}
@@ -31,6 +32,7 @@ r = client.chat.completions.create(
 \end{frame}
 
 \begin{frame}{La API habla HTTP}{REST: el cliente envía una petición a una URL y recibe una respuesta}
+	\note{POST, JSON y código HTTP; SSE sigue usando HTTP para streaming.}
 	\begin{center}
 		\adjustbox{max width=\linewidth}{%
 			\begin{tikzpicture}
@@ -56,6 +58,7 @@ r = client.chat.completions.create(
 \end{frame}
 
 \begin{frame}{Streaming: del POST a los eventos SSE}{La respuesta llega por fragmentos, sin abrir otro protocolo}
+	\note{SSE unidireccional; WebSocket bidireccional; distinguir eventos de respuesta.}
 	{\centering
 		\adjustbox{max width=\linewidth}{%
 			\begin{tikzpicture}[every node/.append style={font=\footnotesize}]
@@ -89,6 +92,7 @@ r = client.chat.completions.create(
 \end{frame}
 
 \begin{frame}{Un chat es una lista de mensajes que crece}{El modelo no tiene memoria: reenvías el historial en cada llamada}
+	\note{Historial reenviado en cada llamada; contexto y coste crecen; recortar o resumir.}
 	\begin{columns}[T]
 		\begin{column}{0.56\textwidth}
 			\centering
@@ -127,6 +131,7 @@ r = client.chat.completions.create(
 \end{frame}
 
 \begin{frame}[fragile]{Salida estructurada: del texto a los datos}{Restringe el decodificador y después valida}
+	\note{JSON Schema restringe formato; Pydantic valida; datos formalmente válidos pueden ser falsos.}
 	\begin{columns}[T]
 		\begin{column}{0.56\textwidth}
 			\begin{lstlisting}
@@ -158,6 +163,7 @@ Diploma.model_validate_json(
 \end{frame}
 
 \begin{frame}{Demo 03: ¿qué vamos a hacer?}{Extraer datos de un diploma y comprobar su formato}
+	\note{Diploma con OCR simulado; comparar JSON libre y respuesta con esquema.}
 	\begin{columns}[T]
 		\begin{column}{0.31\textwidth}
 			\ugrcard[nA]{1}{Entrada}{Un diploma inventado, en texto con errores simulados de OCR.}
@@ -173,6 +179,7 @@ Diploma.model_validate_json(
 \end{frame}
 
 \begin{frame}[fragile]{Demo 03: del OCR al esquema}{Un diploma inventado y un contrato para sus datos}
+	\note{Texto imperfecto de entrada; definir contrato de datos con Pydantic.}
 	\begin{columns}[T]
 		\begin{column}{0.52\textwidth}
 			{\scriptsize\textbf{Texto de entrada} (extracto del OCR):}
@@ -205,6 +212,7 @@ class Diploma(BaseModel):
 \end{frame}
 
 \begin{frame}[fragile]{Demo 03: pedir JSON sin restricciones}{Primera petición: una instrucción en lenguaje natural}
+	\note{Solo prompt de JSON; respuesta puede incumplir nombres, tipos o estructura.}
 	\begin{columns}[T]
 		\begin{column}{0.58\textwidth}
 			\begin{lstlisting}
@@ -234,6 +242,7 @@ except (ValidationError, ValueError) as e:
 \end{frame}
 
 \begin{frame}[fragile]{Demo 03: solicitar y validar el esquema}{Segunda petición: el contrato viaja con la solicitud}
+	\note{Enviar el formato de respuesta con el esquema; validar lo recibido.}
 	\begin{columns}[T]
 		\begin{column}{0.6\textwidth}
 			\begin{lstlisting}
@@ -268,6 +277,7 @@ print(json.dumps(diploma.model_dump(),
 \end{frame}
 
 \begin{frame}[fragile]{Demo 03: ejecutar e interpretar el resultado}{Desde \texttt{miia-demo}, con los servicios y el modelo preparados}
+	\note{Ejecutar y comparar; validar formato no valida el contenido semántico.}
 	\begin{lstlisting}[language={}]
 docker compose run --rm lab python ejemplos/03_salida_estructurada.py
 \end{lstlisting}
@@ -306,6 +316,7 @@ docker compose run --rm lab python ejemplos/03_salida_estructurada.py
 \ugrstatement{El modelo nunca ejecuta nada: solo pide que tu código lo haga.}{Llamada a herramientas (\emph{tool calling}): la base de los agentes, de MCP y de las skills}
 
 \begin{frame}{Demo 04: ¿qué vamos a hacer?}{Convertir horas de trabajo en créditos ECTS mediante una herramienta}
+	\note{El modelo decide cuándo llamar a la función local de conversión.}
 	\begin{columns}[T]
 		\begin{column}{0.31\textwidth}
 			\ugrcard[nA]{1}{Entrada}{Preguntamos cuántos ECTS equivalen a 450 horas.}
@@ -320,6 +331,7 @@ docker compose run --rm lab python ejemplos/03_salida_estructurada.py
 \end{frame}
 
 \begin{frame}{Llamada a herramientas, paso a paso}{La lista de herramientas viaja con la petición como JSON Schema}
+	\note{El servidor propone una llamada; la aplicación la ejecuta y devuelve resultado.}
 	{\centering
 		\adjustbox{max width=\linewidth}{%
 			\begin{tikzpicture}[every node/.append style={font=\footnotesize}]
@@ -341,6 +353,7 @@ docker compose run --rm lab python ejemplos/03_salida_estructurada.py
 \end{frame}
 
 \begin{frame}[fragile]{Demo 04: definir la herramienta}{Una función local y una descripción para el modelo}
+	\note{Definición JSON Schema y función Python; declarar argumentos con claridad.}
 	\begin{columns}[T]
 		\begin{column}{0.58\textwidth}
 			\begin{lstlisting}
@@ -376,6 +389,7 @@ TOOLS = [{
 \end{frame}
 
 \begin{frame}[fragile]{Demo 04: pedir una herramienta}{Primera llamada: la pregunta y las herramientas disponibles}
+	\note{Enviar pregunta y catálogo; el modelo puede responder o solicitar la herramienta.}
 	\begin{columns}[T]
 		\begin{column}{0.58\textwidth}
 			\begin{lstlisting}
@@ -408,6 +422,7 @@ for c in msg.tool_calls:
 \end{frame}
 
 \begin{frame}[fragile]{Demo 04: conservar la solicitud}{La llamada del asistente también forma parte de la conversación}
+	\note{Añadir al historial el mensaje del asistente que solicita la herramienta.}
 	\begin{columns}[T]
 		\begin{column}{0.61\textwidth}
 			\begin{lstlisting}
@@ -437,6 +452,7 @@ messages.append({
 \end{frame}
 
 \begin{frame}[fragile]{Demo 04: ejecutar y devolver el resultado}{La aplicación llama a Python y después consulta otra vez al modelo}
+	\note{Ejecutar localmente; asociar resultado y solicitud; segundo turno del modelo.}
 	\begin{columns}[T]
 		\begin{column}{0.61\textwidth}
 			\begin{lstlisting}
@@ -467,6 +483,7 @@ print(r.choices[0].message.content)
 \end{frame}
 
 \begin{frame}[fragile]{Demo 04: ejecutar y leer el resultado}{Desde \texttt{miia-demo}, con los servicios y el modelo preparados}
+	\note{Seguir el ciclo completo; el modelo redacta la respuesta final tras el resultado.}
 	\begin{lstlisting}[language={}]
 docker compose run --rm lab python ejemplos/04_tool_calling.py
 \end{lstlisting}
@@ -487,6 +504,7 @@ Respuesta final:
 \end{frame}
 
 \begin{frame}{Embeddings y RAG}{Primero buscar, después preguntar}
+	\note{Embeddings para recuperar fragmentos; contexto recuperado antes de generar.}
 	{\scriptsize\bfseries\color{rojoUGR} ANTES: INDEXAR LOS DOCUMENTOS}\par\vspace{-4pt}
 	\ugrsteps{Documentos/{Los textos de partida},
 	Fragmentos/{Se trocean},
@@ -502,6 +520,7 @@ Respuesta final:
 \end{frame}
 
 \begin{frame}{Frameworks: qué abstraen y qué cuestan}{LangChain, LangGraph, LlamaIndex, Haystack, Pydantic AI\ldots}
+	\note{Abstracción acelera; revisar control, complejidad, dependencias y depuración.}
 	\begin{columns}[T]
 		\begin{column}{0.31\textwidth}
 			\ugrcard{1}{Qué hay}{LangChain, LlamaIndex, Haystack y Pydantic AI.}
@@ -517,6 +536,7 @@ Respuesta final:
 \end{frame}
 
 \begin{frame}{Práctica: salida estructurada y herramientas}{Demo del bloque 3}
+	\note{Probar schema y tool calling; observar qué hace el cliente y qué el modelo.}
 	\detailbox{nB}{Ejecuta}{\texttt{... python ejemplos/03\_salida\_estructurada.py}\\
 		\texttt{... python ejemplos/04\_tool\_calling.py}}
 	\begin{itemize}

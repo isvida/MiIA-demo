@@ -444,6 +444,7 @@
   \def\ugr@chips{#1}%
   {\setbeamertemplate{footline}{}\setbeamertemplate{headline}{}%
    \begin{frame}[plain]
+   \note{Presentar el tema, el objetivo y el recorrido del seminario.}
    \begin{tikzpicture}[remember picture,overlay]
      % panel derecho: imagen o mosaico
      \ifx\ugr@cover\@empty
@@ -484,6 +485,7 @@
   \section{#2}%
   {\setbeamertemplate{footline}{}\setbeamertemplate{headline}{}%
    \begin{frame}[plain]
+   \note{#2. #3}
    \begin{tikzpicture}[remember picture,overlay]
      \fill[rojoUGR] (current page.south west) rectangle (current page.north east);
      \ugr@mosaic[white]{([xshift=-5.2cm,yshift=-0.9cm]current page.north east)}{6}{3}{0.62cm}
@@ -500,6 +502,7 @@
 \newcommand{\ugrstatement}[3][rojoUGR]{%
   {\setbeamertemplate{headline}{}%
    \begin{frame}
+   \note{#2. #3}
    \vfill
    {\color{#1}\rule{1.4cm}{4pt}}\par\vspace{16pt}
    {\color{ugrInk}\fontsize{28}{34}\selectfont\bfseries #2\par}
@@ -512,6 +515,7 @@
 \newcommand{\ugrimageframe}[3]{%
   {\setbeamertemplate{footline}{}\setbeamertemplate{headline}{}%
    \begin{frame}[plain]
+   \note{#2. #3}
    \begin{tikzpicture}[remember picture,overlay]
      \IfFileExists{#1}{%
        \node[inner sep=0pt] at (current page.center)
@@ -536,6 +540,7 @@
 \newcommand{\ugrthanks}[4]{%
   {\setbeamertemplate{footline}{}\setbeamertemplate{headline}{}%
    \begin{frame}[plain]
+   \note{#1. #2}
    \begin{tikzpicture}[remember picture,overlay]
      % panel derecho: la misma imagen que la portada si se ha fijado \ugrcover;
      % si no, el mosaico de siempre
