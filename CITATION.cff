@@ -1,0 +1,41 @@
+cff-version: 1.2.0
+message: "Si usas este material, cítalo con los metadatos siguientes."
+type: software
+title: "MiIA-demo: infraestructura LLM on-premise en miniatura"
+abstract: >-
+  Demo en Docker Compose de una infraestructura LLM on-premise en miniatura
+  (Open WebUI, pasarela LiteLLM, Ollama, servidor MCP y ejemplos en Python),
+  preparada para el seminario «Infraestructura LLM on-premise: inferencia,
+  pasarelas, agentes y MCP» del Máster Universitario en Desarrollo del
+  Software de la Universidad de Granada.
+authors:
+  - family-names: "Vidal Daza"
+    given-names: "Isaac"
+    affiliation: "Servicio de Apoyo a la Docencia, CSIRC, Universidad de Granada"
+    email: "isvida@ugr.es"
+    # orcid: "https://orcid.org/XXXX-XXXX-XXXX-XXXX"   # opcional: añade tu ORCID
+repository-code: "https://github.com/isvida/MiIA-demo"
+url: "https://github.com/isvida/MiIA-demo"
+license: Apache-2.0
+date-released: "2026-11-20"   # ajusta a la fecha de la etiqueta v1.0.0
+keywords:
+  - LLM
+  - on-premise
+  - inferencia
+  - LiteLLM
+  - MCP
+  - agentes
+  - Docker Compose
+  - Universidad de Granada
+preferred-citation:
+  type: slides
+  title: "Infraestructura LLM on-premise: inferencia, pasarelas, agentes y MCP"
+  authors:
+    - family-names: "Vidal Daza"
+      given-names: "Isaac"
+      affiliation: "Servicio de Apoyo a la Docencia, CSIRC, Universidad de Granada"
+  year: 2026
+  institution:
+    name: "Universidad de Granada"
+  url: "https://hdl.handle.net/10481/XXXXX"   # sustituir por el handle de Digibug
+  notes: "Máster Universitario en Desarrollo del Software. Licencia CC BY 4.0."

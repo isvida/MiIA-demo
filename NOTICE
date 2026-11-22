@@ -1,0 +1,51 @@
+MiIA-demo
+Copyright 2026 Isaac Vidal Daza
+
+Este producto incluye software desarrollado por Isaac Vidal Daza,
+Servicio de Apoyo a la Docencia, Centro de Servicios de Informática y
+Redes de Comunicaciones (CSIRC), Universidad de Granada.
+
+== Alcance de las licencias ==
+
+  * Código fuente (ejemplos/, lab/, litellm/, mcp/, tests/, workspace/,
+    ficheros docker-compose*.yml, scripts y configuración):
+    Apache License 2.0, véase el fichero LICENSE.
+
+  * Documentación (README y guías) y diapositivas del seminario
+    «Infraestructura LLM on-premise: inferencia, pasarelas, agentes y MCP»:
+    Creative Commons Reconocimiento 4.0 Internacional (CC BY 4.0),
+    véase el fichero LICENSE-DOCS.md.
+
+== Excepciones: material no cubierto por estas licencias ==
+
+  * Ilustraciones generadas con IA. Las imágenes que las diapositivas
+    rotulan como «Ilustración generada con IA» se ofrecen tal cual. No se
+    garantiza que sobre ellas existan derechos de autor que licenciar, y su
+    uso puede estar sujeto a los términos de la herramienta que las generó.
+
+  * Logotipos, nombres y marcas de terceros (por ejemplo, de Open WebUI,
+    LiteLLM, Ollama, vLLM, ThunderAI, Thunderbird, Continue, OpenCode y
+    similares). Pertenecen a sus titulares, se citan solo con fines
+    identificativos y docentes y no se relicencian aquí.
+
+  * Nombre, escudo e identidad gráfica de la Universidad de Granada
+    (incluidos los elementos de la plantilla de la presentación). Son
+    propiedad de la Universidad de Granada y no se licencian aquí; la
+    mención de la afiliación del autor no implica su aval.
+
+  * Textos y datos de las fuentes citadas en las diapositivas. Se
+    referencian, no se redistribuyen.
+
+== Componentes de terceros ==
+
+Este repositorio no incluye ni redistribuye los componentes siguientes: se
+descargan al ejecutar la demo, cada uno con su propia licencia. Consulta
+las condiciones de cada proyecto antes de reutilizarlos.
+
+  * Imágenes de contenedor y servicios: Docker, Open WebUI, LiteLLM,
+    Ollama, PostgreSQL, vLLM (perfil GPU opcional).
+  * Modelos de lenguaje: Qwen (modelo de la demo y del perfil GPU). Los
+    pesos abiertos tienen condiciones propias, que no son siempre las de
+    una licencia de código abierto.
+  * Herramientas opcionales de apoyo: MCP Inspector, codebase-memory-mcp.
+  * Bibliotecas de Python usadas por los ejemplos, según el contenedor lab.
