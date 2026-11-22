@@ -24,6 +24,58 @@ descrita en [Ollama con GPU NVIDIA](#ollama-con-gpu-nvidia).
 - ~8 GB de RAM libres y ~7 GB de disco (imágenes de Docker + modelo de ~1,9 GB).
 - Opcional: GPU NVIDIA con NVIDIA Container Toolkit para el perfil `gpu`.
 
+### Instalar Docker (si aún no lo tienes)
+
+Aunque existen otros métodos (como instalar solo Docker Engine), para equipos
+personales Docker Desktop suele ser la opción más simple porque incluye motor,
+interfaz gráfica y herramientas de terminal en una sola instalación.
+
+#### macOS
+
+1. Descarga Docker Desktop desde la
+  [web oficial](https://www.docker.com/products/docker-desktop/), eligiendo
+  Apple Silicon (M1/M2/M3/M4) o Intel según tu equipo.
+2. Abre el `.dmg`, arrastra Docker a `Aplicaciones` y ejecuta Docker Desktop.
+3. Acepta los términos y concede permisos cuando macOS los solicite.
+
+#### Windows
+
+Requisitos mínimos recomendados (según Docker):
+
+- Windows 10 de 64 bits (22H2+) o Windows 11 de 64 bits (23H2+).
+- 8 GB de RAM y virtualización por hardware activada.
+- WSL 2 activo (versión 2.1.5 o superior).
+
+Pasos:
+
+1. Si no tienes WSL 2, abre PowerShell como administrador y ejecuta
+  `wsl --install`.
+2. Descarga `Docker Desktop Installer.exe` desde la
+  [documentación oficial](https://docs.docker.com/desktop/setup/install/windows-install/)
+  y ejecuta el instalador (manteniendo WSL 2).
+3. Completa el asistente, reinicia si se pide e inicia Docker Desktop.
+4. Acepta el acuerdo de suscripción para arrancar el motor.
+
+#### Linux
+
+Docker Desktop dispone de paquetes para Ubuntu, Debian, Fedora y Arch
+(requiere virtualización KVM). Consulta la
+[guía oficial para Linux](https://docs.docker.com/desktop/setup/install/linux/).
+
+Ejemplo en Ubuntu/Debian:
+
+```bash
+sudo apt-get update
+sudo apt-get install ./docker-desktop-amd64.deb
+systemctl --user start docker-desktop
+```
+
+Comprobación final (en cualquier sistema):
+
+```bash
+docker run hello-world
+```
+
 ## Antes de la charla (importante)
 
 Descargar imágenes y modelo con una red compartida es lento. Hazlo **antes**:
