@@ -18,6 +18,21 @@ flowchart LR
 Ollama también puede usar una GPU NVIDIA mediante la configuración opcional
 descrita en [Ollama con GPU NVIDIA](#ollama-con-gpu-nvidia).
 
+## Tabla de contenidos
+
+- [Requisitos](#requisitos)
+- [Antes de la charla (importante)](#antes-de-la-charla-importante)
+- [Arranque rápido](#arranque-rápido)
+- [Ejemplos: de la API al agente](#ejemplos-de-la-api-al-agente)
+- [Trabajar con OpenCode o Claude Code](#trabajar-con-opencode-o-claude-code)
+- [Guion: qué enseñar en cada bloque de la charla](#guion-qué-enseñar-en-cada-bloque-de-la-charla)
+- [El modelo de la demo](#el-modelo-de-la-demo)
+- [Elegir otro modelo](#elegir-otro-modelo)
+- [Qué se ha simplificado respecto a producción](#qué-se-ha-simplificado-respecto-a-producción)
+- [Ideas para ampliar (ejercicios)](#ideas-para-ampliar-ejercicios)
+- [Skill para agentes (OpenCode y Claude Code)](#skill-para-agentes-opencode-y-claude-code)
+- [Limpieza](#limpieza)
+
 ## Requisitos
 
 - Docker con Compose v2.

@@ -8,6 +8,17 @@ Los ejemplos son demostraciones, no aplicaciones preparadas para producción. La
 respuesta del modelo puede cambiar entre ejecuciones y no debe darse por correcta
 sin comprobarla.
 
+## Tabla de contenidos
+
+- [Antes de empezar](#antes-de-empezar)
+- [01 · Peticiones y streaming](#01--peticiones-y-streaming)
+- [02 · Concurrencia](#02--concurrencia)
+- [03 · Extraer información como JSON](#03--extraer-información-como-json)
+- [04 · Una llamada a herramienta, paso a paso](#04--una-llamada-a-herramienta-paso-a-paso)
+- [05 · Agente con archivos, permisos y skills](#05--agente-con-archivos-permisos-y-skills)
+- [06 · Agente con herramientas descubiertas por MCP](#06--agente-con-herramientas-descubiertas-por-mcp)
+- [Solución de problemas](#solución-de-problemas)
+
 ## Antes de empezar
 
 Desde la carpeta raíz del proyecto, arranca los servicios y espera a que termine
