@@ -1,12 +1,12 @@
 %============================================================ BLOQUE 5 · Agentes, MCP, skills (25 min)
-\ugrsection{05}{Agentes, MCP y skills}{Inicio: 1:05 · 25 min\\De los chats a los agentes}
+\ugrsection{05}{Agentes, MCP y skills}{Inicio: 1:05 · 25 min\\De los chats a los agentes}{Responder y actuar}
 
-\ugrimageframe{imagenes/s05_agente.jpeg}{De responder a actuar}{Un modelo, un banco de herramientas y un bucle · Ilustración generada con IA}
+\ugrimageframe{imagenes/s05_agente.jpeg}{De responder a actuar}{Un modelo, un banco de herramientas y un bucle · Ilustración generada con IA}{Agente con herramientas}
 
-\ugrstatement{Un agente es un modelo con herramientas, dentro de un bucle.}{Un chat responde; un agente actúa y comprueba el resultado}
+\ugrstatement{Un agente es un modelo con herramientas, dentro de un bucle.}{Un chat responde; un agente actúa y comprueba el resultado}{Chat o agente}
 
 \begin{frame}{De los chats a los agentes}{Un agente = un modelo + herramientas + un bucle + contexto}
-	\note{Diferencia clave: decidir, usar herramienta, leer resultado y repetir.}
+	\note{Diferencia clave: decidir, usar herramienta, leer resultado y repetir. NEXT SLIDE: Bucle completo docena}
 	\centering
 	\adjustbox{max width=\linewidth}{%
 		\begin{tikzpicture}
@@ -22,7 +22,7 @@
 \end{frame}
 
 \begin{frame}[fragile]{El bucle completo, en una docena de líneas}{Simplificado de ejemplos/agent\_core.py del kit de demo}
-	\note{Iterar hasta respuesta final; permisos al ejecutar; límite de pasos y contexto.}
+	\note{Iterar hasta respuesta final; permisos al ejecutar; límite de pasos y contexto. NEXT SLIDE: Anatomía agente harness}
 	\begin{columns}[T]
 		\begin{column}{0.62\textwidth}
 			\begin{lstlisting}
@@ -51,7 +51,7 @@ for step in range(MAX_STEPS):
 \end{frame}
 
 \begin{frame}{Anatomía de un agente («harness»)}{Lo que añaden herramientas tipo OpenCode alrededor del bucle}
-	\note{Reglas, herramientas, permisos, contexto, sandbox y extensiones rodean al LLM.}
+	\note{Reglas, herramientas, permisos, contexto, sandbox y extensiones rodean al LLM. NEXT SLIDE: Demo directo}
 	\centering
 	\adjustbox{max width=\linewidth}{%
 		\begin{tikzpicture}
@@ -74,7 +74,7 @@ for step in range(MAX_STEPS):
 \end{frame}
 
 \begin{frame}{Demo 05: ¿qué vamos a hacer?}{Pedir a un agente que prepare un informe de incidencias}
-	\note{Leer incidencias, consultar skill y pedir autorización para escribir informe.md.}
+	\note{Leer incidencias, consultar skill y pedir autorización para escribir informe.md. NEXT SLIDE: Definir agente}
 	\begin{columns}[T]
 		\begin{column}{0.31\textwidth}
 			\ugrcard[nA]{1}{Entrada}{Una carpeta con incidencias y una skill con instrucciones para redactar el informe.}
@@ -89,7 +89,7 @@ for step in range(MAX_STEPS):
 \end{frame}
 
 \begin{frame}[fragile]{Demo 05: ¿cómo se define este agente?}{No hay una clase «Agente»: el programa reúne sus componentes}
-	\note{Cliente, modelo, instrucciones y herramientas; el programa implementa el bucle.}
+	\note{Cliente, modelo, instrucciones y herramientas; el programa implementa el bucle. NEXT SLIDE: Origen de skill}
 	\begin{columns}[T]
 		\begin{column}{0.57\textwidth}
 			\begin{lstlisting}
@@ -121,7 +121,7 @@ final = await run_agent(
 \end{frame}
 
 \begin{frame}[fragile]{Demo 05: ¿de dónde sale la skill?}{El programa la lee localmente antes de consultar al modelo}
-	\note{Catálogo con nombre y descripción; cargar cuerpo completo solo bajo demanda.}
+	\note{Catálogo con nombre y descripción; cargar cuerpo completo solo bajo demanda. NEXT SLIDE: Primera petición}
 	\begin{columns}[T]
 		\begin{column}{0.53\textwidth}
 			\begin{lstlisting}[language={}]
@@ -151,7 +151,7 @@ description: Cómo redactar el informe...
 \end{frame}
 
 \begin{frame}[fragile]{Demo 05: la primera petición al modelo}{El cliente envía instrucciones, tarea y herramientas}
-	\note{System y tarea; se envían descripciones, no código de las herramientas.}
+	\note{System y tarea; se envían descripciones, no código de las herramientas. NEXT SLIDE: Contexto del servidor}
 	\begin{columns}[T]
 		\begin{column}{0.54\textwidth}
 			\begin{lstlisting}[language={}]
@@ -184,7 +184,7 @@ tools: listar_directorio, leer_fichero,
 \end{frame}
 
 \begin{frame}{Demo 05: ¿qué viaja al servidor LLM?}{Ejemplo de carga de \texttt{informe-incidencias}}
-	\note{Mostrar contexto enviado; distinguir contenido de skill de ejecución local.}
+	\note{Mostrar contexto enviado; distinguir contenido de skill de ejecución local. NEXT SLIDE: Propuesta y ejecución}
 	\centering
 	\adjustbox{max width=\linewidth,max height=3.4cm}{%
 		\begin{tikzpicture}[every node/.append style={font=\footnotesize}]
@@ -208,7 +208,7 @@ tools: listar_directorio, leer_fichero,
 \end{frame}
 
 \begin{frame}[fragile]{Demo 05: de la propuesta a la ejecución}{Una llamada a herramienta no es un comando de terminal}
-	\note{Tool call es una propuesta estructurada; el dispatch decide y aplica permisos.}
+	\note{Tool call es una propuesta estructurada; el dispatch decide y aplica permisos. NEXT SLIDE: Informe y fichero}
 	\begin{columns}[T]
 		\begin{column}{0.56\textwidth}
 			{\footnotesize\textbf{Posible respuesta del modelo} (\texttt{tool\_calls}):}
@@ -237,7 +237,7 @@ tools: listar_directorio, leer_fichero,
 \end{frame}
 
 \begin{frame}[fragile]{Demo 05: del informe solicitado al fichero}{Una posible secuencia; las decisiones del modelo pueden variar}
-	\note{Skill, lectura de incidencias, redacción y escritura autorizada; no determinista.}
+	\note{Skill, lectura de incidencias, redacción y escritura autorizada; no determinista. NEXT SLIDE: Conectar herramientas MCP}
 	\begin{lstlisting}[language={}]
 docker compose run --rm lab python ejemplos/05_agente_minimo.py
 \end{lstlisting}
@@ -263,7 +263,7 @@ docker compose run --rm lab python ejemplos/05_agente_minimo.py
 \end{frame}
 
 \begin{frame}{MCP: conectar IA y herramientas}{Model Context Protocol, un estándar abierto}
-	\note{Protocolo común para conectar clientes LLM con herramientas y contexto externos.}
+	\note{Protocolo común para conectar clientes LLM con herramientas y contexto externos. NEXT SLIDE: Servidor MCP}
 	\begin{columns}[c]
 		\begin{column}{0.6\textwidth}
 			\centering
@@ -278,7 +278,7 @@ docker compose run --rm lab python ejemplos/05_agente_minimo.py
 \end{frame}
 
 \begin{frame}[fragile]{Qué expone un servidor MCP}{Tools, resources y prompts, descubiertos en tiempo de ejecución}
-	\note{Tools ejecutables; resources legibles; prompts reutilizables; descubrimiento dinámico.}
+	\note{Tools ejecutables; resources legibles; prompts reutilizables; descubrimiento dinámico. NEXT SLIDE: Demo directo}
 	\begin{columns}[T]
 		\begin{column}{0.56\textwidth}
 			\begin{lstlisting}
@@ -307,7 +307,7 @@ mcp.run(transport="streamable-http")
 \end{frame}
 
 \begin{frame}{Demo 06: ¿qué vamos a hacer?}{Consultar asignaturas de IoT y crear un ticket con un agente MCP}
-	\note{Consultar el servidor MCP y usar resultado para crear un ticket.}
+	\note{Consultar el servidor MCP y usar resultado para crear un ticket. NEXT SLIDE: Definir agente}
 	\begin{columns}[T]
 		\begin{column}{0.31\textwidth}
 			\ugrcard[nA]{1}{Entrada}{Una tarea: consultar las asignaturas de IoT, crear un ticket y listar los tickets.}
@@ -323,7 +323,7 @@ mcp.run(transport="streamable-http")
 \end{frame}
 
 \begin{frame}[fragile]{Demo 06: ¿cómo se define este agente?}{El mismo bucle que en la demo 05, con herramientas de un servidor MCP}
-	\note{Reutilizar el bucle; reemplazar herramientas locales por herramientas MCP.}
+	\note{Reutilizar el bucle; reemplazar herramientas locales por herramientas MCP. NEXT SLIDE: Descubrir herramientas}
 	\begin{columns}[T]
 		\begin{column}{0.58\textwidth}
 			\begin{lstlisting}
@@ -355,7 +355,7 @@ async with streamablehttp_client(MCP_URL) as (
 \end{frame}
 
 \begin{frame}[fragile]{Demo 06: descubrir y presentar herramientas}{El cliente traduce las descripciones MCP al formato de la API del LLM}
-	\note{Descubrimiento MCP; adaptar schema y descripción al formato tool calling.}
+	\note{Descubrimiento MCP; adaptar schema y descripción al formato tool calling. NEXT SLIDE: Flujo llamadas}
 	\begin{columns}[T]
 		\begin{column}{0.56\textwidth}
 			\begin{lstlisting}
@@ -385,7 +385,7 @@ tools = [{
 \end{frame}
 
 \begin{frame}{Demo 06: ¿quién habla con quién?}{El agente hace de intermediario entre el LLM y el servidor MCP}
-	\note{LLM solicita; cliente agente llama a MCP; resultado vuelve al LLM.}
+	\note{LLM solicita; cliente agente llama a MCP; resultado vuelve al LLM. NEXT SLIDE: Propuesta y resultado}
 	\centering
 	\adjustbox{max width=\linewidth,max height=3.8cm}{%
 		\begin{tikzpicture}[every node/.append style={font=\footnotesize}]
@@ -413,7 +413,7 @@ tools = [{
 \end{frame}
 
 \begin{frame}[fragile]{Demo 06: de la propuesta al resultado}{El cliente traduce la petición del modelo en una llamada MCP}
-	\note{Mapear nombre y argumentos; ejecutar herramienta remota y capturar resultado.}
+	\note{Mapear nombre y argumentos; ejecutar herramienta remota y capturar resultado. NEXT SLIDE: Comprobar resultado}
 	\begin{columns}[T]
 		\begin{column}{0.55\textwidth}
 			{\footnotesize\textbf{Posible solicitud del modelo}:}
@@ -443,7 +443,7 @@ res = await mcp.call_tool(nombre, argumentos)
 \end{frame}
 
 \begin{frame}[fragile]{Demo 06: ejecutar y comprobar el resultado}{La tarea predeterminada consulta IoT y crea un ticket}
-	\note{Seguir consulta y creación; comprobar el resultado final, no solo el mensaje del modelo.}
+	\note{Seguir consulta y creación; comprobar el resultado final, no solo el mensaje del modelo. NEXT SLIDE: Herramientas y skills}
 	\begin{lstlisting}[language={}]
 docker compose run --rm lab python ejemplos/06_agente_mcp.py
 \end{lstlisting}
@@ -469,7 +469,7 @@ docker compose run --rm lab python ejemplos/06_agente_mcp.py
 \end{frame}
 
 \begin{frame}{Herramientas, MCP, skills y subagentes}{Quién hace qué}
-	\note{Herramienta ejecuta; MCP conecta; skill aporta instrucciones; subagente delega.}
+	\note{Herramienta ejecuta; MCP conecta; skill aporta instrucciones; subagente delega. NEXT SLIDE: Skills bajo demanda}
 	\begin{columns}[T]
 		\begin{column}{0.225\textwidth}
 			\ugrcard[nA]{1}{Herramienta}{Función pedida por el modelo (fichero, API).}
@@ -488,7 +488,7 @@ docker compose run --rm lab python ejemplos/06_agente_mcp.py
 \end{frame}
 
 \begin{frame}{Skills: saber hacer bajo demanda}{La revelación progresiva mantiene el contexto pequeño}
-	\note{Descripciones visibles primero; cargar instrucciones detalladas cuando hacen falta.}
+	\note{Descripciones visibles primero; cargar instrucciones detalladas cuando hacen falta. NEXT SLIDE: Skill en texto}
 	\begin{columns}[c]
 		\begin{column}{0.5\textwidth}
 			\centering
@@ -506,7 +506,7 @@ docker compose run --rm lab python ejemplos/06_agente_mcp.py
 \end{frame}
 
 \begin{frame}[fragile]{Una skill es texto plano}{Fácil de escribir, revisar, versionar y compartir}
-	\note{SKILL.md legible y versionable; instrucciones, no código ejecutable.}
+	\note{SKILL.md legible y versionable; instrucciones, no código ejecutable. NEXT SLIDE: Agentes de código}
 	\begin{columns}[T]
 		\begin{column}{0.55\textwidth}
 			\begin{lstlisting}[language={}]
@@ -531,7 +531,7 @@ description: Cómo redactar el informe
 \end{frame}
 
 \begin{frame}{Agentes de código: OpenCode y OpenClaw}{El mismo bucle, otra superficie: el terminal y tus apps de mensajería}
-	\note{Mismo patrón de agente; interfaz distinta y más acceso al entorno.}
+	\note{Mismo patrón de agente; interfaz distinta y más acceso al entorno. NEXT SLIDE: Riesgos de agentes}
 	\begin{columns}[T]
 		\begin{column}{0.5\textwidth}
 			\themeblock{nA}{OpenCode}{%
@@ -552,7 +552,7 @@ description: Cómo redactar el informe
 \end{frame}
 
 \begin{frame}{Los agentes cambian el modelo de amenazas}{Inyección de prompts, permisos y cadena de suministro}
-	\note{Inyección indirecta; herramientas y dependencias amplían superficie de riesgo.}
+	\note{Inyección indirecta; herramientas y dependencias amplían superficie de riesgo. NEXT SLIDE: Permisos límites}
 	\begin{columns}[c]
 		\begin{column}{0.42\textwidth}
 			\centering
@@ -571,7 +571,7 @@ description: Cómo redactar el informe
 \end{frame}
 
 \begin{frame}{Salvaguardas}{Da a un agente el acceso de un compañero nuevo el primer día}
-	\note{Mínimo privilegio; aprobación humana; sandbox; revisar cambios y credenciales.}
+	\note{Mínimo privilegio; aprobación humana; sandbox; revisar cambios y credenciales. NEXT SLIDE: Casos de uso}
 	\begin{columns}[T]
 		\begin{column}{0.31\textwidth}
 			\ugrcard[nB]{1}{Mínimo privilegio}{Lectura por defecto; sandbox y reglas de red.}
@@ -587,7 +587,7 @@ description: Cómo redactar el informe
 \end{frame}
 
 \begin{frame}{Práctica: agentes con ficheros, skills y MCP}{Demo del bloque 5}
-	\note{Mostrar agente local y MCP; enfatizar permisos y supervisión.}
+	\note{Mostrar agente local y MCP; enfatizar permisos y supervisión. NEXT SLIDE: Casos uso}
 	\detailbox{nB}{Ejecuta}{\texttt{... python ejemplos/05\_agente\_minimo.py}\\
 		\texttt{... python ejemplos/06\_agente\_mcp.py}}
 	\begin{itemize}

@@ -1,10 +1,10 @@
 %============================================================ BLOQUE 4 · Arquitectura (20 min)
-\ugrsection{04}{Arquitectura del servicio}{Inicio: 0:45 · 20 min\\Pasarela, escalado y operación}
+\ugrsection{04}{Arquitectura del servicio}{Inicio: 0:45 · 20 min\\Pasarela, escalado y operación}{Punto de entrada}
 
-\ugrimageframe{imagenes/s04_pasarela.jpeg}{Un único punto de entrada}{Muchos clientes, una sola puerta y varios backends detrás · Ilustración generada con IA}
+\ugrimageframe{imagenes/s04_pasarela.jpeg}{Un único punto de entrada}{Muchos clientes, una sola puerta y varios backends detrás · Ilustración generada con IA}{Arquitectura del núcleo}
 
 \begin{frame}{Arquitectura del núcleo}{Modular, escalable en horizontal y con interfaces estándar}
-	\note{Recorrido: cliente, NGINX, LiteLLM, vLLM; Keycloak controla el acceso.}
+	\note{Recorrido: cliente, NGINX, LiteLLM, vLLM; Keycloak controla el acceso. NEXT SLIDE: Pasarela LiteLLM}
 	\centering
 	\adjustbox{max width=\linewidth}{%
 		\begin{tikzpicture}
@@ -24,7 +24,7 @@
 \end{frame}
 
 \begin{frame}[fragile]{¿Por qué una pasarela? LiteLLM}{Un único endpoint delante de muchos backends}
-	\note{Claves virtuales, presupuestos, enrutado y fallback; API estable.}
+	\note{Claves virtuales, presupuestos, enrutado y fallback; API estable. NEXT SLIDE: Escalar conmutar error}
 	\begin{columns}[T]
 		\begin{column}{0.46\textwidth}
 			\footnotesize
@@ -56,7 +56,7 @@ litellm_settings:
 \end{frame}
 
 \begin{frame}{Escalar y conmutar por error}{Se añade capacidad añadiendo contenedores, sin rediseñar}
-	\note{Añadir réplicas GPU; nube como respaldo; abstraer el backend al cliente.}
+	\note{Añadir réplicas GPU; nube como respaldo; abstraer el backend al cliente. NEXT SLIDE: Operación servicio}
 	\begin{columns}[c]
 		\begin{column}{0.56\textwidth}
 			\centering
@@ -86,7 +86,7 @@ litellm_settings:
 \end{frame}
 
 \begin{frame}{Opéralo como cualquier otro servicio}{Qué cambia cuando la carga de trabajo es un LLM}
-	\note{Métricas LLM; capacidad y carga; versiones, TLS y consumo.}
+	\note{Métricas LLM; capacidad y carga; versiones, TLS y consumo. NEXT SLIDE: Ruta kubernetes}
 	\begin{columns}[T]
 		\begin{column}{0.5\textwidth}
 			\themeblock{nA}{Monitorizar}{Cola, tiempo al primer token, tokens/s y GPU. vLLM expone \texttt{/metrics}.}\\[6pt]
@@ -100,7 +100,7 @@ litellm_settings:
 \end{frame}
 
 \begin{frame}{Hoja de ruta: Kubernetes}{De contenedores gestionados a mano a operaciones declarativas}
-	\note{Ingress, despliegues, GPU Operator, HPA y Helm; KServe puede escalar a cero.}
+	\note{Ingress, despliegues, GPU Operator, HPA y Helm; KServe puede escalar a cero. NEXT SLIDE: Pasarela claves respaldo}
 	\begin{columns}[c]
 		\begin{column}{0.46\textwidth}
 			\centering
@@ -126,7 +126,7 @@ litellm_settings:
 \end{frame}
 
 \begin{frame}{Práctica: pasarela, claves y respaldo}{Demo del bloque 4}
-	\note{Crear clave limitada; probar segundo modelo y fallback en CPU.}
+	\note{Crear clave limitada; probar segundo modelo y fallback en CPU. NEXT SLIDE: Agentes MCP skills}
 	\detailbox{nB}{Prueba}{Abre \texttt{localhost:4000/ui} (usuario \texttt{admin}, contraseña \texttt{admin}) y crea una clave virtual con un presupuesto pequeño.}
 	\begin{itemize}
 		\small

@@ -440,11 +440,11 @@
 }
 
 % Portada.  \ugrtitleframe[ \ugrtag{IA}\ \ugrtag{Datos} ]
-\newcommand{\ugrtitleframe}[1][]{%
+\newcommand{\ugrtitleframe}[2][]{%
   \def\ugr@chips{#1}%
   {\setbeamertemplate{footline}{}\setbeamertemplate{headline}{}%
    \begin{frame}[plain]
-   \note{Presentar el tema, el objetivo y el recorrido del seminario.}
+   \note{Presentar el tema, el objetivo y el recorrido del seminario. NEXT SLIDE: #2}
    \begin{tikzpicture}[remember picture,overlay]
      % panel derecho: imagen o mosaico
      \ifx\ugr@cover\@empty
@@ -481,11 +481,11 @@
 
 % Separador de sección:  \ugrsection{01}{Título}{subtítulo opcional}
 % (también crea la \section, que aparece arriba a la derecha en los frames)
-\newcommand{\ugrsection}[3]{%
+\newcommand{\ugrsection}[4]{%
   \section{#2}%
   {\setbeamertemplate{footline}{}\setbeamertemplate{headline}{}%
    \begin{frame}[plain]
-   \note{#2. #3}
+   \note{#2. #3 NEXT SLIDE: #4}
    \begin{tikzpicture}[remember picture,overlay]
      \fill[rojoUGR] (current page.south west) rectangle (current page.north east);
      \ugr@mosaic[white]{([xshift=-5.2cm,yshift=-0.9cm]current page.north east)}{6}{3}{0.62cm}
@@ -499,10 +499,10 @@
 }
 
 % Una sola idea, a gran tamaño:  \ugrstatement[color]{frase}{fuente/nota}
-\newcommand{\ugrstatement}[3][rojoUGR]{%
+\newcommand{\ugrstatement}[4][rojoUGR]{%
   {\setbeamertemplate{headline}{}%
    \begin{frame}
-   \note{#2. #3}
+   \note{#2. #3 NEXT SLIDE: #4}
    \vfill
    {\color{#1}\rule{1.4cm}{4pt}}\par\vspace{16pt}
    {\color{ugrInk}\fontsize{28}{34}\selectfont\bfseries #2\par}
@@ -512,10 +512,10 @@
 }
 
 % Imagen a pantalla completa:  \ugrimageframe{fichero}{título}{pie}
-\newcommand{\ugrimageframe}[3]{%
+\newcommand{\ugrimageframe}[4]{%
   {\setbeamertemplate{footline}{}\setbeamertemplate{headline}{}%
    \begin{frame}[plain]
-   \note{#2. #3}
+   \note{#2. #3 NEXT SLIDE: #4}
    \begin{tikzpicture}[remember picture,overlay]
      \IfFileExists{#1}{%
        \node[inner sep=0pt] at (current page.center)
@@ -537,10 +537,10 @@
 }
 
 % Cierre:  \ugrthanks{Gracias}{¿Preguntas?}{contacto, colaboradores}{logos}
-\newcommand{\ugrthanks}[4]{%
+\newcommand{\ugrthanks}[5]{%
   {\setbeamertemplate{footline}{}\setbeamertemplate{headline}{}%
    \begin{frame}[plain]
-   \note{#1. #2}
+   \note{#1. #2\if\relax\detokenize{#5}\relax\else\ NEXT SLIDE: #5\fi}
    \begin{tikzpicture}[remember picture,overlay]
      % panel derecho: la misma imagen que la portada si se ha fijado \ugrcover;
      % si no, el mosaico de siempre

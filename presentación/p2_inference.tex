@@ -1,8 +1,8 @@
 %============================================================ BLOQUE 2 · Inferencia (20 min)
-\ugrsection{02}{Motores de inferencia}{Inicio: 0:10 · 20 min\\Cómo un servidor atiende a un modelo}
+\ugrsection{02}{Motores de inferencia}{Inicio: 0:10 · 20 min\\Cómo un servidor atiende a un modelo}{Tokens y contexto}
 
 \begin{frame}{Tokens, contexto y las dos fases}{Qué hace un servidor de modelos con cada petición}
-	\note{Tokenización; prefill procesa el prompt, decode genera uno a uno.}
+	\note{Tokenización; prefill procesa el prompt, decode genera uno a uno. NEXT SLIDE: Límites inferencia}
 	\begin{columns}[T]
 		\begin{column}{0.5\textwidth}
 			\footnotesize
@@ -34,7 +34,7 @@
 \end{frame}
 
 \begin{frame}{¿Qué limita cada fase?}{La diferencia está en cuánto cálculo hacemos por cada dato leído}
-	\note{Prefill: cálculo; decode: ancho de banda de memoria. Depende de carga y hardware.}
+	\note{Prefill: cálculo; decode: ancho de banda de memoria. Depende de carga y hardware. NEXT SLIDE: Demo directo}
 	\begin{columns}[T]
 		\begin{column}{0.49\textwidth}
 			\centering
@@ -71,7 +71,7 @@
 \end{frame}
 
 \begin{frame}{Demo 01: ¿qué vamos a hacer?}{Comparar una respuesta completa con una respuesta en streaming}
-	\note{Misma pregunta; comparar respuesta completa, streaming, TTFT y velocidad.}
+	\note{Misma pregunta; comparar respuesta completa, streaming, TTFT y velocidad. NEXT SLIDE: Conectar preparar}
 	\begin{columns}[T]
 		\begin{column}{0.31\textwidth}
 			\ugrcard[nA]{1}{Entrada}{Una pregunta al modelo: ¿qué es la caché KV?}
@@ -86,7 +86,7 @@
 \end{frame}
 
 \begin{frame}[fragile]{Demo 01: conectar y preparar la pregunta}{Primero configuramos el cliente y construimos los mensajes}
-	\note{Config local; SDK OpenAI apunta a LiteLLM; system y user forman el contexto.}
+	\note{Config local; SDK OpenAI apunta a LiteLLM; system y user forman el contexto. NEXT SLIDE: Llamada normal}
 	\begin{columns}[T]
 		\begin{column}{0.58\textwidth}
 			\begin{lstlisting}
@@ -122,7 +122,7 @@ messages = [
 \end{frame}
 
 \begin{frame}[fragile]{Demo 01: llamada normal}{La aplicación espera la respuesta completa}
-	\note{Una petición bloqueante; medir duración total y tokens de entrada/salida.}
+	\note{Una petición bloqueante; medir duración total y tokens de entrada/salida. NEXT SLIDE: Respuesta streaming}
 	\begin{columns}[T]
 		\begin{column}{0.58\textwidth}
 			\begin{lstlisting}
@@ -150,7 +150,7 @@ print(f"[{time.perf_counter() - t0:.1f} s · "
 \end{frame}
 
 \begin{frame}[fragile]{Demo 01: respuesta en streaming}{Fragmento del código: el texto aparece a medida que llega}
-	\note{Eventos delta; TTFT; velocidad aproximada; uso solo si el servidor lo envía.}
+	\note{Eventos delta; TTFT; velocidad aproximada; uso solo si el servidor lo envía. NEXT SLIDE: Interpretar resultados}
 	\begin{columns}[T]
 		\begin{column}{0.58\textwidth}
 			\begin{lstlisting}
@@ -184,7 +184,7 @@ for ev in stream:
 \end{frame}
 
 \begin{frame}[fragile]{Demo 01: ejecutar e interpretar el resultado}{Desde la carpeta \texttt{miia-demo}, con los servicios y el modelo preparados}
-	\note{Dos llamadas; comparar tiempos; la explicación de KV en la salida es imprecisa.}
+	\note{Dos llamadas; comparar tiempos; la explicación de KV en la salida es imprecisa. NEXT SLIDE: Memoria modelo}
 	\begin{lstlisting}[language={}]
 docker compose run --rm lab python ejemplos/01_hola_api.py
 \end{lstlisting}
@@ -215,7 +215,7 @@ Generación: 17.6 tokens/s
 \end{frame}
 
 \begin{frame}{La memoria es el verdadero límite}{Solo los pesos del modelo, sin contar caché KV ni sobrecarga}
-	\note{Pesos no son toda la memoria: reservar KV y sobrecarga; cuantizar reduce tamaño.}
+	\note{Pesos no son toda la memoria: reservar KV y sobrecarga; cuantizar reduce tamaño. NEXT SLIDE: Calcular memoria}
 	\vspace{0.3cm}
 	\begin{columns}[T]
 		\begin{column}{0.3\textwidth}
@@ -232,7 +232,7 @@ Generación: 17.6 tokens/s
 \end{frame}
 
 \begin{frame}{Calcular la memoria de los pesos}{Una estimación antes de elegir la GPU}
-	\note{Parámetros por bytes; FP16 frente a cuantización; estimación, no capacidad total.}
+	\note{Parámetros por bytes; FP16 frente a cuantización; estimación, no capacidad total. NEXT SLIDE: Ahorro memoria}
 	\themeblock{rojoUGR}{Fórmula}{%
 		\centering
 		$\text{Memoria de los pesos (bytes)} \approx
@@ -252,7 +252,7 @@ Generación: 17.6 tokens/s
 \end{frame}
 
 \begin{frame}{Tres ideas para ahorrar memoria}{La caché KV crece con el contexto \emph{y} con las peticiones simultáneas}
-	\note{Reducir precisión, contexto y concurrencia; KV crece con ambos últimos.}
+	\note{Reducir precisión, contexto y concurrencia; KV crece con ambos últimos. NEXT SLIDE: Concurrencia GPU}
 	\begin{columns}[T]
 		\begin{column}{0.31\textwidth}
 			\ugrcard{1}{Cuantización}{De 2 a 4$\times$ menos memoria, con poca pérdida.}
@@ -268,7 +268,7 @@ Generación: 17.6 tokens/s
 \end{frame}
 
 \begin{frame}{Por qué una GPU atiende a muchos usuarios}{Batching continuo y gestión de la caché KV}
-	\note{Batching continuo; atender peticiones en fases distintas; administrar KV.}
+	\note{Batching continuo; atender peticiones en fases distintas; administrar KV. NEXT SLIDE: Demo directo}
 	\begin{columns}[T]
 		\begin{column}{0.58\textwidth}
 			\centering
@@ -307,7 +307,7 @@ Generación: 17.6 tokens/s
 \end{frame}
 
 \begin{frame}{Demo 02: ¿qué vamos a hacer?}{Observar qué pasa cuando llegan varias preguntas a la vez}
-	\note{Concurrencia real; latencia individual y tiempo total de grupo.}
+	\note{Concurrencia real; latencia individual y tiempo total de grupo. NEXT SLIDE: Lanzar peticiones}
 	\begin{columns}[T]
 		\begin{column}{0.31\textwidth}
 			\ugrcard[nA]{1}{Entrada}{Varias preguntas independientes sobre Granada: ocho por defecto.}
@@ -323,7 +323,7 @@ Generación: 17.6 tokens/s
 \end{frame}
 
 \begin{frame}[fragile]{Demo 02: lanzar varias peticiones}{El cliente inicia todas las tareas sin esperar a que termine la anterior}
-	\note{asyncio.gather; iniciar todas las tareas antes de esperar resultados.}
+	\note{asyncio.gather; iniciar todas las tareas antes de esperar resultados. NEXT SLIDE: Medir cada petición}
 	\begin{columns}[T]
 		\begin{column}{0.55\textwidth}
 			\begin{lstlisting}
@@ -362,7 +362,7 @@ asyncio.run(main())
 \end{frame}
 
 \begin{frame}[fragile]{Demo 02: qué hace cada petición}{Todas comparten el mismo instante inicial \texttt{t0}}
-	\note{Mismo t0; registrar fin y duración por petición; no confundir con tokens/s.}
+	\note{Mismo t0; registrar fin y duración por petición; no confundir con tokens/s. NEXT SLIDE: Leer resultados}
 	\begin{columns}[T]
 		\begin{column}{0.58\textwidth}
 			\begin{lstlisting}
@@ -396,7 +396,7 @@ async def una(i: int, t0: float):
 \end{frame}
 
 \begin{frame}[fragile]{Demo 02: ejecutar y leer el resultado}{Desde \texttt{miia-demo}, con los servicios y el modelo preparados}
-	\note{Ejecutar la demo; comparar duraciones; resultados varían según servidor y modelo.}
+	\note{Ejecutar la demo; comparar duraciones; resultados varían según servidor y modelo. NEXT SLIDE: Caché KV avanzada}
 	\begin{lstlisting}[language={}]
 docker compose run --rm lab python ejemplos/02_concurrencia.py 8
 \end{lstlisting}
@@ -429,7 +429,7 @@ Total: 586 tokens en 28.0 s → 21.0 tokens/s agregados
 \end{frame}
 
 \begin{frame}{PagedAttention y RadixAttention}{Dos formas complementarias de aprovechar la caché KV}
-	\note{PagedAttention reduce fragmentación; RadixAttention comparte prefijos KV.}
+	\note{PagedAttention reduce fragmentación; RadixAttention comparte prefijos KV. NEXT SLIDE: Panorama motores}
 	{\footnotesize Ejemplo: \textcolor{nA}{instrucción común} y preguntas distintas, \textcolor{rojoUGR}{A} y \textcolor{nB}{B}.}
 	\vspace{2pt}
 	\begin{columns}[T]
@@ -474,7 +474,7 @@ Total: 586 tokens en 28.0 s → 21.0 tokens/s agregados
 \end{frame}
 
 \begin{frame}{El panorama de motores}{Los mismos modelos, con distintos compromisos}
-	\note{vLLM, Ollama y otros; rendimiento, compatibilidad y facilidad operativa.}
+	\note{vLLM, Ollama y otros; rendimiento, compatibilidad y facilidad operativa. NEXT SLIDE: Elegir modelo}
 	\centering\footnotesize
 	\setlength{\tabcolsep}{3pt}
 	\begin{tabular}{@{}R{2.1cm}R{6.2cm}R{3.9cm}@{}}
@@ -492,7 +492,7 @@ Total: 586 tokens en 28.0 s → 21.0 tokens/s agregados
 \end{frame}
 
 \begin{frame}{Elegir un modelo}{Primero que quepa, luego la calidad, luego la licencia}
-	\note{Primero memoria disponible; después calidad en la tarea y licencia.}
+	\note{Primero memoria disponible; después calidad en la tarea y licencia. NEXT SLIDE: Medir rendimiento}
 	\begin{columns}[T]
 		\begin{column}{0.5\textwidth}
 			\footnotesize
@@ -512,7 +512,7 @@ Total: 586 tokens en 28.0 s → 21.0 tokens/s agregados
 \end{frame}
 
 \begin{frame}{Práctica: mídelo tú mismo}{Demo del bloque 2}
-	\note{Probar tamaño y concurrencia; observar métricas, no quedarse con impresiones.}
+	\note{Probar tamaño y concurrencia; observar métricas, no quedarse con impresiones. NEXT SLIDE: API interacción}
 	\detailbox{nB}{Ejecuta}{\texttt{docker compose run --rm lab python ejemplos/01\_hola\_api.py}\\
 		\texttt{docker compose run --rm lab python ejemplos/02\_concurrencia.py 8}}
 	\begin{itemize}
