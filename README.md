@@ -36,7 +36,7 @@ ejecutarse (imágenes de contenedor y modelos), que tienen sus propias
 condiciones. Detalles en [`NOTICE`](NOTICE).
 
 La presentación está depositada en **Digibug**, el repositorio institucional
-de la Universidad de Granada: <https://hdl.handle.net/10481/XXXXX>
+de la Universidad de Granada: <[https://hdl.handle.net/10481/117143](https://hdl.handle.net/10481/117143)>
 
 Para citar este trabajo, usa el botón «Cite this repository» de GitHub
 (fichero [`CITATION.cff`](CITATION.cff)) o la referencia de Digibug.
